@@ -42,6 +42,7 @@ const taskTypeSection = document.getElementById("task-type-section");
 const taskTypeRow = document.getElementById("task-type-row");
 const focusTypeIndicator = document.getElementById("focus-type-indicator");
 const btnStartFocus = document.getElementById("btn-start-focus");
+const taskNoteInput = document.getElementById("task-note-input");
 const controls = document.getElementById("controls");
 
 // ── 状态 ──────────────────────────────
@@ -54,6 +55,7 @@ let endTime = null;
 let currentMode = "work";
 let sessionStartTime = null; // 当前专注开始的绝对时间戳
 let currentTaskType = "无类型";   // 当前选中的任务类型
+let currentNote = "";            // 当前备注
 let calYear, calMonth;
 
 // ── 计时器状态持久化（刷新不丢） ──────
@@ -244,10 +246,12 @@ function recordFocus() {
   const key = getDateKey();
   if (!Array.isArray(focusData[key])) focusData[key] = [];
   const type = currentTaskType || "无类型";
+  const note = currentNote.trim();
   focusData[key].push({
     start: sessionStartTime,
     end: Date.now(),
     type: type,
+    note: note || "",
   });
   addCustomType(type);
   saveFocusData();
@@ -263,15 +267,15 @@ function getFocusSessions(dateKey) {
   return Array.isArray(arr) ? arr : [];
 }
 
-function addFocusSession(dateKey, start, end, type) {
+function addFocusSession(dateKey, start, end, type, note) {
   if (!Array.isArray(focusData[dateKey])) focusData[dateKey] = [];
-  focusData[dateKey].push({ start, end, type: type || "无类型" });
+  focusData[dateKey].push({ start, end, type: type || "无类型", note: note || "" });
   saveFocusData();
 }
 
-function editFocusSession(dateKey, index, start, end, type) {
+function editFocusSession(dateKey, index, start, end, type, note) {
   if (!Array.isArray(focusData[dateKey])) return;
-  focusData[dateKey][index] = { start, end, type: type || "无类型" };
+  focusData[dateKey][index] = { start, end, type: type || "无类型", note: note || "" };
   saveFocusData();
 }
 
@@ -409,7 +413,9 @@ function resetTimer() {
   currentMode = "work";
   timeLeft = WORK;
   currentTaskType = "无类型";
+  currentNote = "";
   sessionStartTime = null; // 重置：清除上次专注开始时间
+  taskNoteInput.value = "";
   updateModeUI();
   updateTimerDisplay();
   renderTaskTypeRow();
@@ -509,15 +515,18 @@ function renderPeriodItem(s, i) {
     </div>`;
   }
   const taskType = s.type || "专注";
+  const note = s.note || "";
   const start = s.start ? formatTime(s.start) : "??:??";
   const end = s.end ? formatTime(s.end) : "??:??";
   const startTimeVal = s.start ? timestampToTimeString(s.start) : "";
   const endTimeVal = s.end ? timestampToTimeString(s.end) : "";
+  const noteAttr = note ? ` data-note="${note.replace(/"/g, '&quot;')}"` : "";
   return `<div class="period-item" data-index="${i}">
     <span class="item-time">${start}<span class="time-sep"> – </span>${end}</span>
     <span class="type-tag">${taskType}</span>
+    ${note ? `<span class="item-note">${note}</span>` : ""}
     <span class="detail-actions">
-      <button class="detail-edit-btn" data-action="edit" data-index="${i}" data-start="${startTimeVal}" data-end="${endTimeVal}" data-type="${taskType}" title="编辑">✎</button>
+      <button class="detail-edit-btn" data-action="edit" data-index="${i}" data-start="${startTimeVal}" data-end="${endTimeVal}" data-type="${taskType}"${noteAttr} title="编辑">✎</button>
       <button class="detail-del-btn" data-action="delete" data-index="${i}" title="删除">✕</button>
     </span>
   </div>`;
@@ -634,6 +643,7 @@ function startEditSession(dateKey, index) {
   const startVal = (session && session.start) ? timestampToTimeString(session.start) : "";
   const endVal = (session && session.end) ? timestampToTimeString(session.end) : "";
   const typeVal = (session && session.type) || "无类型";
+  const noteVal = (session && session.note) || "";
   const visibleTypes = getVisibleTypes();
   const typeOptions = visibleTypes.map(t =>
     `<option value="${t}" ${t === typeVal ? "selected" : ""}>${t}</option>`
@@ -645,6 +655,7 @@ function startEditSession(dateKey, index) {
       <input type="time" class="edit-start" value="${startVal}">
       <span class="time-sep">–</span>
       <input type="time" class="edit-end" value="${endVal}">
+      <input type="text" class="edit-note" value="${noteVal.replace(/"/g, '&quot;')}" placeholder="备注…" maxlength="50">
       <button class="detail-save-btn" data-action="save" data-index="${index}">保存</button>
       <button class="detail-cancel-btn" data-action="cancel" data-index="${index}">取消</button>
     </div>
@@ -689,7 +700,7 @@ function startEditSession(dateKey, index) {
 }
 
 // 保存编辑
-function saveEditSession(dateKey, index, startStr, endStr, type) {
+function saveEditSession(dateKey, index, startStr, endStr, type, note) {
   if (!startStr || !endStr) {
     alert("请填写开始和结束时间");
     return;
@@ -701,9 +712,9 @@ function saveEditSession(dateKey, index, startStr, endStr, type) {
     return;
   }
   if (index >= 0) {
-    editFocusSession(dateKey, index, start, end, type);
+    editFocusSession(dateKey, index, start, end, type, note);
   } else {
-    addFocusSession(dateKey, start, end, type);
+    addFocusSession(dateKey, start, end, type, note);
   }
   addCustomType(type);
   refreshAfterEdit();
@@ -746,8 +757,10 @@ detailPeriods.addEventListener("click", (e) => {
     const startInput = form.querySelector(".edit-start");
     const endInput = form.querySelector(".edit-end");
     const typeSelect = form.querySelector(".edit-type");
+    const noteInput = form.querySelector(".edit-note");
     const type = typeSelect ? typeSelect.value : "无类型";
-    saveEditSession(dateKey, index, startInput.value, endInput.value, type);
+    const note = noteInput ? noteInput.value : "";
+    saveEditSession(dateKey, index, startInput.value, endInput.value, type, note);
     return;
   }
 
@@ -997,6 +1010,11 @@ taskTypeRow.addEventListener("keydown", (e) => {
     e.preventDefault();
     e.target.blur();
   }
+});
+
+// 备注输入同步
+taskNoteInput.addEventListener("input", () => {
+  currentNote = taskNoteInput.value;
 });
 
 document.getElementById("cal-prev").addEventListener("click", () => {
