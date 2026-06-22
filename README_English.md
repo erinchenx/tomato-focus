@@ -21,7 +21,7 @@ A clean and simple Pomodoro timer to help you stay focused. 25 minutes focused +
 
 ## 🌐 Live Demo
 
-👉 [tomato-focus.netlify.app](https://tomato-focus.netlify.app)
+https://tomato-focus-x.netlify.app/
 
 ## 🚀 Local Usage
 
