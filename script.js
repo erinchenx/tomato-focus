@@ -403,8 +403,8 @@ function pauseTimer() {
   clearInterval(timer);
   timeLeft = Math.max(0, Math.round((endTime - Date.now()) / 1000));
   endTime = null;
-  // 暂停后保持控制按钮可见，切换为"继续专注"
-  startPauseBtn.textContent = "继续专注";
+  // 暂停后保持控制按钮可见，根据当前模式切换文字
+  startPauseBtn.textContent = currentMode === "work" ? "继续专注" : "继续休息";
   saveTimerState();
 }
 
@@ -1118,7 +1118,12 @@ function init() {
         timeLeft = saved.timeLeft != null ? saved.timeLeft : WORK;
         updateModeUI();
         updateTimerDisplay();
-        console.log("[番茄时钟] ✅ 暂停状态已恢复:", timeLeft, "秒");
+        // 恢复暂停时的按钮UI：根据模式显示"继续专注"或"继续休息"
+        startPauseBtn.textContent = currentMode === "work" ? "继续专注" : "继续休息";
+        taskTypeSection.style.display = "none";
+        controls.style.display = "";
+        focusTypeIndicator.style.display = "none";
+        console.log("[番茄时钟] ✅ 暂停状态已恢复:", timeLeft, "秒, 模式:", currentMode);
         persistIndicator.textContent = "";
         persistIndicator.className = "persist-indicator default";
         showNotification("已恢复暂停状态");
