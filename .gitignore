@@ -11,3 +11,32 @@ wheels/
 
 # Environment variables
 .env
+.env*
+
+# IDE / Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Claude Code (local settings)
+.claude/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Logs
+*.log
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
