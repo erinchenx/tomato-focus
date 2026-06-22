@@ -16,6 +16,28 @@
   }
 })();
 
+// ── Supabase 配置 ──────────────────────
+const SUPABASE_URL = "https://godpcmioyidqnonwbhqr.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_ADgGALRfPkKU2tBLe5nJnQ_wcDj5kbb";
+
+let supabase = null;
+let currentUser = null;
+let syncDirty = false;
+let syncTimer = null;
+
+async function initSupabase() {
+  try {
+    // 动态加载 Supabase SDK，失败不影响本地功能
+    const mod = await import("https://esm.sh/@supabase/supabase-js@2");
+    supabase = mod.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    console.log("[番茄时钟] Supabase 已初始化");
+    return true;
+  } catch (e) {
+    console.warn("[番茄时钟] Supabase 初始化失败（离线或网络问题），仅本地模式可用", e);
+  }
+  return false;
+}
+
 // ── DOM 引用 ──────────────────────────
 const timerDisplay = document.getElementById("timer");
 const modeBadge = document.getElementById("mode-badge");
@@ -44,6 +66,19 @@ const focusTypeIndicator = document.getElementById("focus-type-indicator");
 const btnStartFocus = document.getElementById("btn-start-focus");
 const taskNoteInput = document.getElementById("task-note-input");
 const controls = document.getElementById("controls");
+const authBtn = document.getElementById("auth-btn");
+const authOverlay = document.getElementById("auth-overlay");
+const authClose = document.getElementById("auth-close");
+const authForm = document.getElementById("auth-form");
+const authFormSection = document.getElementById("auth-form-section");
+const authLoggedIn = document.getElementById("auth-logged-in");
+const authEmail = document.getElementById("auth-email");
+const authPassword = document.getElementById("auth-password");
+const authError = document.getElementById("auth-error");
+const authSubmit = document.getElementById("auth-submit");
+const authUserEmail = document.getElementById("auth-user-email");
+const authAvatar = document.getElementById("auth-avatar");
+const authSyncStatus = document.getElementById("auth-sync-status");
 
 // ── 状态 ──────────────────────────────
 let timer = null;
@@ -161,6 +196,7 @@ function loadFocusData() {
 
 function saveFocusData() {
   localStorage.setItem("focusData", JSON.stringify(focusData));
+  if (currentUser) { syncDirty = true; schedulePush(); }
 }
 
 function getDateKey(date) {
@@ -189,10 +225,12 @@ function loadTypeData() {
 
 function saveCustomTypes() {
   localStorage.setItem("customTypes", JSON.stringify(customTypes));
+  if (currentUser) { syncDirty = true; schedulePush(); }
 }
 
 function saveHiddenTypes() {
   localStorage.setItem("hiddenTypes", JSON.stringify(hiddenTypes));
+  if (currentUser) { syncDirty = true; schedulePush(); }
 }
 
 function addCustomType(type) {
@@ -798,13 +836,14 @@ function hideDayDetail() {
 }
 
 // ── 浏览器系统通知 ────────────────────
-let notificationPermissionRequested = false;
+let notificationPermissionRequested = localStorage.getItem("notifAsked") === "1";
 
 function requestNotificationPermission() {
   if (!("Notification" in window)) return;
   if (Notification.permission === "granted" || Notification.permission === "denied") return;
   if (notificationPermissionRequested) return;
   notificationPermissionRequested = true;
+  localStorage.setItem("notifAsked", "1");
   Notification.requestPermission();
 }
 
@@ -1046,9 +1085,367 @@ document.addEventListener("click", (e) => {
   }
 });
 
+// ── 云端同步 ──────────────────────────
+
+async function pullFromCloud() {
+  if (!supabase || !currentUser) return;
+  console.log("[番茄时钟] 从云端拉取数据...");
+  updateSyncStatus("syncing", "同步中…");
+
+  try {
+    // 拉取专注会话
+    const { data: sessions, error: sErr } = await supabase
+      .from("focus_sessions")
+      .select("date_key, start_ts, end_ts, type, note, updated_at")
+      .order("start_ts", { ascending: true });
+
+    if (sErr) throw sErr;
+
+    // 拉取设置
+    const { data: settings, error: setErr } = await supabase
+      .from("user_settings")
+      .select("custom_types, hidden_types")
+      .single();
+
+    if (setErr && setErr.code !== "PGRST116") throw setErr;
+
+    // 合并专注数据：云端 → focusData 格式
+    const cloudFocus = {};
+    if (sessions) {
+      sessions.forEach(s => {
+        if (!cloudFocus[s.date_key]) cloudFocus[s.date_key] = [];
+        cloudFocus[s.date_key].push({
+          start: s.start_ts,
+          end: s.end_ts,
+          type: s.type || "无类型",
+          note: s.note || "",
+          _updated_at: s.updated_at ? new Date(s.updated_at).getTime() : 0,
+        });
+      });
+    }
+
+    // 合并：本地 + 云端（union，云端优先）
+    const merged = {};
+    const allKeys = new Set([...Object.keys(focusData), ...Object.keys(cloudFocus)]);
+
+    for (const key of allKeys) {
+      const local = focusData[key] || [];
+      const cloud = cloudFocus[key] || [];
+      const sessionMap = new Map();
+
+      // 先放本地
+      local.forEach((s, i) => {
+        if (!s) return;
+        const id = `${s.start ?? "null"}_${s.end ?? "null"}_${s.type || ""}`;
+        sessionMap.set(id, { ...s, _localIdx: i });
+      });
+
+      // 云端覆盖（updated_at 更新者胜）
+      cloud.forEach(s => {
+        const id = `${s.start ?? "null"}_${s.end ?? "null"}_${s.type || ""}`;
+        const existing = sessionMap.get(id);
+        if (!existing || (s._updated_at || 0) > (existing._updated_at || 0)) {
+          sessionMap.set(id, s);
+        }
+      });
+
+      merged[key] = Array.from(sessionMap.values()).map(s => {
+        const { _updated_at, _localIdx, ...clean } = s;
+        return clean;
+      });
+    }
+
+    focusData = merged;
+    saveFocusDataLocal(); // 只写 localStorage，不触发再次推送
+
+    // 合并设置
+    if (settings) {
+      if (settings.custom_types && Array.isArray(settings.custom_types)) {
+        const mergedTypes = [...new Set([...customTypes, ...settings.custom_types])];
+        customTypes = mergedTypes;
+        saveTypesLocal();
+      }
+      if (settings.hidden_types && Array.isArray(settings.hidden_types)) {
+        const mergedHidden = [...new Set([...hiddenTypes, ...settings.hidden_types])];
+        hiddenTypes = mergedHidden;
+        saveHiddenTypesLocal();
+      }
+    }
+
+    syncDirty = false;
+    updateSyncStatus("ok", "已同步 ✓");
+    console.log("[番茄时钟] ✅ 云端数据已同步");
+  } catch (e) {
+    console.error("[番茄时钟] 拉取云端数据失败:", e);
+    updateSyncStatus("error", "同步失败 ⚠");
+  }
+}
+
+async function pushToCloud() {
+  if (!supabase || !currentUser || !syncDirty) return;
+  console.log("[番茄时钟] 推送数据到云端...");
+  updateSyncStatus("syncing", "同步中…");
+
+  try {
+    // 删除旧数据，全量写入（番茄钟数据量小，简单可靠）
+    await supabase.from("focus_sessions").delete().eq("user_id", currentUser.id);
+
+    // 批量插入
+    const rows = [];
+    for (const [dateKey, sessions] of Object.entries(focusData)) {
+      if (!Array.isArray(sessions)) continue;
+      sessions.forEach(s => {
+        if (!s) return;
+        rows.push({
+          user_id: currentUser.id,
+          date_key: dateKey,
+          start_ts: s.start,
+          end_ts: s.end,
+          type: s.type || "无类型",
+          note: s.note || "",
+        });
+      });
+    }
+
+    if (rows.length > 0) {
+      // 分批插入，每批最多 500 条
+      for (let i = 0; i < rows.length; i += 500) {
+        const batch = rows.slice(i, i + 500);
+        const { error } = await supabase.from("focus_sessions").insert(batch);
+        if (error) throw error;
+      }
+    }
+
+    // 设置 upsert
+    const { error: setErr } = await supabase
+      .from("user_settings")
+      .upsert({
+        user_id: currentUser.id,
+        custom_types: customTypes,
+        hidden_types: hiddenTypes,
+        updated_at: new Date().toISOString(),
+      });
+
+    if (setErr) throw setErr;
+
+    syncDirty = false;
+    updateSyncStatus("ok", "已同步 ✓");
+    console.log("[番茄时钟] ✅ 数据已推送到云端");
+  } catch (e) {
+    console.error("[番茄时钟] 推送云端数据失败:", e);
+    updateSyncStatus("error", "同步失败 ⚠");
+  }
+}
+
+function schedulePush() {
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => pushToCloud(), 2000);
+}
+
+// 仅写 localStorage（不触发云端推送，用于拉取合并后）
+function saveFocusDataLocal() {
+  localStorage.setItem("focusData", JSON.stringify(focusData));
+}
+
+function saveTypesLocal() {
+  localStorage.setItem("customTypes", JSON.stringify(customTypes));
+}
+
+function saveHiddenTypesLocal() {
+  localStorage.setItem("hiddenTypes", JSON.stringify(hiddenTypes));
+}
+
+// ── Auth 认证 ──────────────────────────
+
+function updateAuthUI() {
+  if (currentUser) {
+    const email = currentUser.email || "";
+    const initial = email.charAt(0).toUpperCase() || "👤";
+    authBtn.textContent = initial;
+    authBtn.classList.add("logged-in");
+    authUserEmail.textContent = email;
+    authAvatar.textContent = initial;
+    authFormSection.style.display = "none";
+    authLoggedIn.style.display = "";
+  } else {
+    authBtn.textContent = "👤";
+    authBtn.classList.remove("logged-in");
+    authFormSection.style.display = "";
+    authLoggedIn.style.display = "none";
+    authEmail.value = "";
+    authPassword.value = "";
+    authError.textContent = "";
+    authSubmit.textContent = "登录";
+    updateSyncStatus("ok", "已同步 ✓");
+  }
+}
+
+function updateSyncStatus(state, text) {
+  if (!authSyncStatus) return;
+  authSyncStatus.textContent = text;
+  authSyncStatus.className = "auth-sync-status " + state;
+}
+
+function openAuthModal() {
+  authOverlay.classList.add("show");
+  if (currentUser) {
+    authFormSection.style.display = "none";
+    authLoggedIn.style.display = "";
+  } else {
+    authFormSection.style.display = "";
+    authLoggedIn.style.display = "none";
+    // 重置表单
+    authEmail.value = "";
+    authPassword.value = "";
+    authError.textContent = "";
+    authSubmit.textContent = "登录";
+  }
+}
+
+function closeAuthModal() {
+  authOverlay.classList.remove("show");
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const email = authEmail.value.trim();
+  const password = authPassword.value;
+
+  if (!email || !password) {
+    authError.textContent = "请填写邮箱和密码";
+    return;
+  }
+  if (password.length < 6) {
+    authError.textContent = "密码至少需要 6 位";
+    return;
+  }
+
+  authError.textContent = "";
+  authSubmit.disabled = true;
+  authSubmit.textContent = "登录中…";
+
+  try {
+    // 先尝试登录
+    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+    if (!signInErr) {
+      closeAuthModal();
+      return;
+    }
+    // 用户不存在 → 自动注册（Confirm email 已关，注册即登录）
+    if (signInErr.message && signInErr.message.includes("Invalid login credentials")) {
+      authSubmit.textContent = "注册中…";
+      const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+      if (signUpErr) throw signUpErr;
+      // signUp 成功后 onAuthStateChange 会自动拉取云数据
+      closeAuthModal();
+    } else {
+      throw signInErr;
+    }
+  } catch (err) {
+    authError.textContent = err.message || "操作失败，请重试";
+    authError.style.color = "#d9534f";
+    authSubmit.textContent = "登录";
+  }
+
+  authSubmit.disabled = false;
+}
+
+async function handleSignOut() {
+  if (syncDirty) await pushToCloud();
+  if (supabase) await supabase.auth.signOut();
+  currentUser = null;
+  updateAuthUI();
+  closeAuthModal();
+}
+
+// ── 事件绑定：Auth ──────────────────────
+
+authBtn.addEventListener("click", openAuthModal);
+
+authClose.addEventListener("click", closeAuthModal);
+
+authOverlay.addEventListener("click", (e) => {
+  if (e.target === authOverlay) closeAuthModal();
+});
+
+authForm.addEventListener("submit", handleAuthSubmit);
+
+document.getElementById("auth-logout").addEventListener("click", handleSignOut);
+
+document.getElementById("auth-force-sync").addEventListener("click", async () => {
+  await pullFromCloud();
+  await pushToCloud();
+  updateTodayCount();
+  updateCalendar();
+  renderTaskTypeRow();
+});
+
+// ── 离线检测 ────────────────────────────
+
+window.addEventListener("online", () => {
+  if (currentUser && syncDirty) {
+    pushToCloud();
+    showNotification("网络已恢复，同步中…");
+  }
+});
+
+window.addEventListener("offline", () => {
+  showNotification("已离线，数据将保存在本地");
+});
+
+// 页面卸载前最后一次同步（兜底，尽力而为）
+window.addEventListener("beforeunload", () => {
+  if (currentUser && syncDirty && supabase) {
+    // 尝试用 fetch + keepalive 做最后一次推送
+    const session = supabase.auth.session;
+    // 注：实际推送可能在 beforeunload 中超时，此处仅标记
+    console.log("[番茄时钟] beforeunload 云端同步标记");
+  }
+});
+
 // ── 初始化 ────────────────────────────
 function init() {
   try {
+    // 初始化 Supabase（非阻塞：网络问题也不影响本地功能）
+    initSupabase().then(ok => {
+      if (ok && supabase) {
+        // 监听认证状态变化
+        supabase.auth.onAuthStateChange((event, session) => {
+          console.log("[番茄时钟] Auth 状态变化:", event);
+          if (session?.user) {
+            currentUser = session.user;
+            updateAuthUI();
+            pullFromCloud().then(() => {
+              updateTodayCount();
+              updateCalendar();
+              renderTaskTypeRow();
+              if (dayDetail.classList.contains("show") && dayDetail._dateKey) {
+                const cell = daysGrid.querySelector(`.day-cell[data-date="${dayDetail._dateKey}"]`);
+                if (cell) showDayDetail(dayDetail._dateKey, cell);
+              }
+            });
+          } else if (event === "SIGNED_OUT") {
+            currentUser = null;
+            updateAuthUI();
+          }
+        });
+
+        // 恢复已有会话
+        supabase.auth.getSession().then(({ data }) => {
+          if (data?.session?.user) {
+            currentUser = data.session.user;
+            updateAuthUI();
+            pullFromCloud().then(() => {
+              updateTodayCount();
+              updateCalendar();
+              renderTaskTypeRow();
+            });
+            console.log("[番茄时钟] ✅ 会话已恢复:", currentUser.email);
+          }
+        });
+      }
+    });
+
     loadFocusData();
     loadTypeData();
     renderTaskTypeRow();

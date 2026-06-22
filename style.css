@@ -895,6 +895,272 @@ body {
 }
 
 /* ==============================
+   Auth 认证
+   ============================== */
+
+/* 日期头部 — flex 容纳登录按钮 */
+.date-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+.date-line {
+  flex: 1;
+  text-align: center;
+}
+
+/* 登录按钮 */
+.auth-btn {
+  flex-shrink: 0;
+  width: clamp(28px, 5 * var(--s), 36px);
+  height: clamp(28px, 5 * var(--s), 36px);
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
+  font-size: clamp(14px, 2.5 * var(--s), 18px);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.auth-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.auth-btn.logged-in {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+  font-size: clamp(11px, 1.8 * var(--s), 13px);
+  font-weight: 600;
+}
+
+/* Auth Overlay 遮罩 */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-overlay.show {
+  display: flex;
+}
+
+/* Auth Modal 卡片 */
+.auth-modal {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  width: min(360px, 90vw);
+  padding: clamp(20px, 4 * var(--s), 32px);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  animation: authIn 0.25s ease;
+}
+
+@keyframes authIn {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* 关闭按钮 */
+.auth-close {
+  position: absolute;
+  top: 10px;
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary);
+  font-size: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.auth-close:hover {
+  background: rgba(0, 0, 0, 0.12);
+  color: var(--text-primary);
+}
+
+/* Tab 标题 */
+.auth-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  margin-bottom: 2px;
+}
+
+.auth-tab {
+  flex: 1;
+  font-family: var(--font);
+  font-size: clamp(14px, 2.2 * var(--s), 16px);
+  font-weight: 600;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: default;
+  border-bottom: 2px solid var(--accent);
+  letter-spacing: 0.03em;
+  text-align: center;
+}
+
+/* 副标题 */
+.auth-subtitle {
+  font-size: clamp(11px, 1.5 * var(--s), 13px);
+  color: var(--text-secondary);
+  text-align: center;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+/* 表单 */
+#auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.auth-input {
+  font-family: var(--font);
+  font-size: clamp(13px, 2 * var(--s), 15px);
+  padding: 10px 16px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.auth-input:focus {
+  border-color: var(--accent);
+}
+
+.auth-input::placeholder {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+/* 错误提示 */
+.auth-error {
+  font-size: clamp(11px, 1.6 * var(--s), 13px);
+  color: #d9534f;
+  min-height: 0;
+  text-align: center;
+}
+
+/* 提交按钮 */
+.auth-submit {
+  font-family: var(--font);
+  font-size: clamp(13px, 2 * var(--s), 15px);
+  font-weight: 500;
+  padding: 10px 0;
+  border-radius: 100px;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: #fff;
+  letter-spacing: 0.03em;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(199, 91, 57, 0.25);
+  width: 100%;
+}
+
+.auth-submit:hover {
+  background: #b04b2d;
+  box-shadow: 0 4px 14px rgba(199, 91, 57, 0.35);
+  transform: translateY(-1px);
+}
+
+.auth-submit:active {
+  transform: scale(0.97);
+}
+
+.auth-submit.secondary {
+  background: rgba(0, 0, 0, 0.06);
+  color: var(--text-secondary);
+  box-shadow: none;
+}
+
+.auth-submit.secondary:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* 已登录区域 */
+#auth-logged-in {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-avatar {
+  width: clamp(40px, 8 * var(--s), 52px);
+  height: clamp(40px, 8 * var(--s), 52px);
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: clamp(18px, 4 * var(--s), 24px);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-user-email {
+  font-size: clamp(12px, 2 * var(--s), 14px);
+  color: var(--text-primary);
+  font-weight: 500;
+  word-break: break-all;
+  text-align: center;
+}
+
+/* 同步状态 */
+.auth-sync-status {
+  font-size: clamp(10px, 1.5 * var(--s), 12px);
+  color: var(--success);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.auth-sync-status.syncing {
+  color: var(--text-secondary);
+}
+
+.auth-sync-status.error {
+  color: var(--accent);
+}
+
+/* ==============================
    超小屏微调（宽度 ≤ 360px）
    ============================== */
 @media (max-width: 360px) {
