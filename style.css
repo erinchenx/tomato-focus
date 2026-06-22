@@ -1,5 +1,5 @@
 /* ===========================
-   番茄时钟 — Apple × 安缦
+   番茄时钟 — Apple × 安缦 · 自适应无滚动
    =========================== */
 
 *,
@@ -29,48 +29,69 @@
   --radius: 16px;
   --radius-lg: 24px;
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+
+  /*
+    核心思路：所有尺寸由视口宽高中的较小者决定
+    --s = min(1vw, 1vh) 的倍数，确保横屏/竖屏都能装下
+  */
+  --s: min(1vw, 1vh);
 }
 
 body {
   font-family: var(--font);
   background-color: var(--bg-warm);
   color: var(--text-primary);
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 20px;
+  padding: clamp(6px, 1.5vw, 16px);
+  padding-left: max(clamp(6px, 1.5vw, 16px), env(safe-area-inset-left, 0px));
+  padding-right: max(clamp(6px, 1.5vw, 16px), env(safe-area-inset-right, 0px));
+  padding-top: max(clamp(6px, 1.5vw, 16px), env(safe-area-inset-top, 0px));
+  padding-bottom: max(clamp(6px, 1.5vw, 16px), env(safe-area-inset-bottom, 0px));
   -webkit-font-smoothing: antialiased;
-  /* 微妙的纹理感 */
+  overflow: hidden; /* 页面级禁止滚动 */
   background-image:
     radial-gradient(ellipse at 20% 50%, rgba(220, 200, 180, 0.3) 0%, transparent 50%),
     radial-gradient(ellipse at 80% 20%, rgba(210, 190, 160, 0.2) 0%, transparent 50%);
 }
 
-/* ---------- 主容器：毛玻璃 ---------- */
+/* ---------- 主容器 ---------- */
 .container {
   background: var(--bg-card);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
-  border-radius: var(--radius-lg);
+  border-radius: clamp(16px, 3vw, 24px);
   box-shadow: var(--shadow-lg), var(--shadow-sm);
-  padding: 44px 40px 36px;
-  max-width: 400px;
-  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.6);
+
+  /* 宽高均不超视口 */
+  width: min(calc(100vw - 16px), 480px);
+  max-height: calc(100vh - 16px);
+  max-height: calc(100dvh - 16px);
+
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.6);
+
+  /* 间距随视口缩放 */
+  padding: clamp(16px, 4 * var(--s), 36px) clamp(16px, 4 * var(--s), 40px);
+  gap: clamp(6px, 2 * var(--s), 16px);
+
+  /* 关键：不滚动，内容由 flex 自动压缩 */
+  overflow: hidden;
 }
 
 /* ---------- 日期 ---------- */
 .date-header {
   text-align: center;
+  flex-shrink: 0;
 }
 
 .date-line {
-  font-size: 15px;
+  font-size: clamp(12px, 2.2 * var(--s), 16px);
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.02em;
@@ -81,21 +102,25 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 18px;
+  gap: clamp(6px, 2 * var(--s), 14px);
   width: 100%;
+  flex-shrink: 0;
 }
 
 .mode-badge {
-  font-size: 33px;
+  font-size: clamp(22px, 5 * var(--s), 32px);
   font-weight: 600;
   font-family: "Marker Felt", "Comic Sans MS", cursive, sans-serif;
   letter-spacing: 0.02em;
   color: var(--accent);
 }
 
+/* 计时环：同时受 vw 和 vh 约束，取较小值保证不溢出 */
 .timer-ring {
-  width: 220px;
-  height: 220px;
+  --ring-w: clamp(130px, 32vw, 240px);
+  --ring-h: clamp(110px, 28vh, 240px);
+  width: min(var(--ring-w), var(--ring-h));
+  height: min(var(--ring-w), var(--ring-h));
   border-radius: 50%;
   background: var(--ring-bg);
   border: 2px solid var(--ring-border);
@@ -111,7 +136,7 @@ body {
 }
 
 .timer-time {
-  font-size: 52px;
+  font-size: clamp(34px, 8 * var(--s), 52px);
   font-weight: 300;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
@@ -124,12 +149,14 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   transition: opacity 0.3s ease;
+  width: 100%;
+  flex-shrink: 0;
 }
 
 .task-type-label {
-  font-size: 12px;
+  font-size: clamp(10px, 1.6 * var(--s), 13px);
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.04em;
@@ -139,20 +166,20 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 5px;
   flex-wrap: wrap;
 }
 
 .btn-start-focus {
-  margin-top: 8px;
+  margin-top: 4px;
   width: 100%;
 }
 
 .task-type-btn {
   font-family: var(--font);
-  font-size: 12px;
+  font-size: clamp(10px, 1.6 * var(--s), 13px);
   font-weight: 500;
-  padding: 5px 12px;
+  padding: 4px 10px;
   border-radius: 100px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: transparent;
@@ -161,6 +188,7 @@ body {
   transition: all 0.2s ease;
   letter-spacing: 0.02em;
   position: relative;
+  white-space: nowrap;
 }
 
 .task-type-btn:hover {
@@ -209,14 +237,14 @@ body {
 
 .task-type-input {
   font-family: var(--font);
-  font-size: 12px;
-  padding: 5px 10px;
+  font-size: clamp(10px, 1.6 * var(--s), 13px);
+  padding: 4px 8px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.6);
   color: var(--text-primary);
   outline: none;
-  width: 90px;
+  width: 80px;
   transition: border-color 0.2s ease;
 }
 
@@ -226,21 +254,23 @@ body {
 
 /* 专注中类型指示 */
 .focus-type-indicator {
-  font-size: 13px;
+  font-size: clamp(11px, 1.8 * var(--s), 14px);
   font-weight: 500;
   color: var(--accent);
   text-align: center;
   letter-spacing: 0.03em;
+  flex-shrink: 0;
 }
 
 /* ---------- 持久化状态指示 ---------- */
 .persist-indicator {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 500;
   text-align: center;
   min-height: 0;
   line-height: 1;
   transition: opacity 0.5s ease;
+  flex-shrink: 0;
 }
 .persist-indicator.restored { color: var(--text-secondary); }
 .persist-indicator.default { color: var(--text-secondary); opacity: 0.5; }
@@ -249,20 +279,22 @@ body {
 /* ---------- 按钮 ---------- */
 .controls {
   display: flex;
-  gap: 14px;
+  gap: clamp(8px, 2vw, 14px);
+  flex-shrink: 0;
 }
 
 .btn-primary,
 .btn-secondary {
   font-family: var(--font);
-  font-size: 15px;
+  font-size: clamp(13px, 2 * var(--s), 15px);
   font-weight: 500;
-  padding: 10px 28px;
+  padding: clamp(7px, 1.5 * var(--s), 10px) clamp(20px, 4 * var(--s), 28px);
   border-radius: 100px;
   border: none;
   cursor: pointer;
   transition: all 0.25s ease;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .btn-primary {
@@ -299,25 +331,26 @@ body {
 .stats-section {
   width: 100%;
   text-align: center;
-  padding: 16px 0;
+  padding: clamp(6px, 2 * var(--s), 12px) 0;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
 }
 
 .stat-item {
   display: flex;
   justify-content: center;
   align-items: baseline;
-  gap: 6px;
+  gap: 4px;
 }
 
 .stat-label {
-  font-size: 14px;
+  font-size: clamp(12px, 2 * var(--s), 14px);
   color: var(--text-secondary);
 }
 
 .stat-value {
-  font-size: 28px;
+  font-size: clamp(22px, 4 * var(--s), 30px);
   font-weight: 500;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
@@ -325,31 +358,36 @@ body {
 }
 
 .stat-unit {
-  font-size: 14px;
+  font-size: clamp(12px, 2 * var(--s), 14px);
   color: var(--text-secondary);
 }
 
 /* ---------- 月历 ---------- */
 .calendar-section {
   width: 100%;
+  flex-shrink: 1; /* 允许日历被压缩 */
+  min-height: 0;   /* flex 子项默认 min-height: auto，重置以允许收缩 */
+  display: flex;
+  flex-direction: column;
 }
 
 .calendar-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: clamp(4px, 1.5 * var(--s), 10px);
+  flex-shrink: 0;
 }
 
 .cal-nav {
   font-family: var(--font);
-  font-size: 20px;
+  font-size: clamp(16px, 3 * var(--s), 20px);
   font-weight: 300;
   color: var(--text-secondary);
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 2px 10px;
   border-radius: 6px;
   transition: all 0.2s ease;
   line-height: 1;
@@ -361,7 +399,7 @@ body {
 }
 
 .cal-month {
-  font-size: 15px;
+  font-size: clamp(13px, 2 * var(--s), 15px);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.03em;
@@ -372,23 +410,26 @@ body {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   text-align: center;
-  margin-bottom: 8px;
+  margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .weekday-row span {
-  font-size: 11px;
+  font-size: clamp(9px, 1.5 * var(--s), 11px);
   font-weight: 500;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-  padding: 6px 0;
+  padding: 3px 0;
 }
 
 /* 日期格 */
 .days-row {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
+  gap: 1px;
+  flex-shrink: 1;
+  min-height: 0;
 }
 
 .day-cell {
@@ -398,7 +439,7 @@ body {
   justify-content: center;
   align-items: center;
   border-radius: 50%;
-  font-size: 13px;
+  font-size: clamp(10px, 1.6 * var(--s), 13px);
   font-weight: 400;
   color: var(--text-primary);
   cursor: default;
@@ -427,11 +468,11 @@ body {
 /* 专注标记点 */
 .day-dot {
   position: absolute;
-  bottom: 4px;
+  bottom: max(2px, 6%);
   left: 50%;
   transform: translateX(-50%);
-  width: 5px;
-  height: 5px;
+  width: max(3px, 12%);
+  height: max(3px, 12%);
   border-radius: 50%;
   background: var(--accent);
   opacity: 0.7;
@@ -441,7 +482,7 @@ body {
   opacity: 1;
 }
 
-/* ---------- 顶部通知卡片（macOS 风格） ---------- */
+/* ---------- 顶部通知卡片 ---------- */
 #toast {
   position: fixed;
   top: 0;
@@ -449,13 +490,13 @@ body {
   z-index: 9999;
   display: flex;
   align-items: center;
-  gap: 14px;
-  width: 380px;
-  padding: 16px 20px;
+  gap: clamp(8px, 2vw, 14px);
+  width: min(calc(100vw - 16px), 400px);
+  padding: clamp(10px, 2vw, 16px) clamp(12px, 2.5vw, 20px);
   background: rgba(255, 255, 255, 0.88);
   backdrop-filter: blur(40px) saturate(200%);
   -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border-radius: 0 0 16px 16px;
+  border-radius: 0 0 clamp(10px, 2vw, 16px) clamp(10px, 2vw, 16px);
   box-shadow:
     0 8px 28px rgba(0, 0, 0, 0.12),
     0 1px 4px rgba(0, 0, 0, 0.06);
@@ -463,27 +504,24 @@ body {
   border-top: none;
   cursor: default;
   user-select: none;
-  /* 从上方滑入 */
   transform: translateX(-50%) translateY(-100%);
   transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
-  /* 顶部圆角在收起时看不到，展开后自然贴合 */
 }
 
 #toast.show {
   transform: translateX(-50%) translateY(0);
 }
 
-/* 关闭按钮 */
 .toast-close {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: clamp(22px, 4vw, 28px);
+  height: clamp(22px, 4vw, 28px);
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.06);
   color: var(--text-secondary);
-  font-size: 16px;
+  font-size: clamp(13px, 2.5vw, 16px);
   line-height: 1;
   cursor: pointer;
   display: flex;
@@ -499,7 +537,7 @@ body {
 }
 
 .toast-icon {
-  font-size: 28px;
+  font-size: clamp(20px, 4vw, 28px);
   flex-shrink: 0;
   line-height: 1;
 }
@@ -512,14 +550,14 @@ body {
 }
 
 .toast-title {
-  font-size: 13px;
+  font-size: clamp(11px, 1.8vw, 13px);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.02em;
 }
 
 .toast-message {
-  font-size: 14px;
+  font-size: clamp(12px, 1.8vw, 14px);
   font-weight: 400;
   color: var(--text-secondary);
   line-height: 1.4;
@@ -535,12 +573,13 @@ body {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-radius: 16px;
-  padding: 20px 22px 16px;
+  border-radius: clamp(10px, 2vw, 16px);
+  padding: clamp(12px, 2.5vw, 20px) clamp(14px, 3vw, 22px) clamp(10px, 2vw, 16px);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.5);
-  width: 320px;
+  width: min(calc(100vw - 16px), 360px);
   max-height: 80vh;
+  max-height: 80dvh;
   overflow-y: auto;
   opacity: 0;
   transform: translateY(8px);
@@ -554,102 +593,104 @@ body {
   pointer-events: auto;
 }
 
-/* Header */
 .detail-header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
-  margin-bottom: 16px;
+  margin-bottom: clamp(8px, 2vw, 14px);
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .detail-date {
-  font-size: 15px;
+  font-size: clamp(13px, 2vw, 15px);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .detail-count {
-  font-size: 13px;
+  font-size: clamp(11px, 1.6vw, 13px);
   color: var(--accent);
   font-weight: 500;
 }
 
-/* 时段区块 */
 .detail-periods {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .period-block {
   background: rgba(0, 0, 0, 0.02);
   border-radius: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
 }
 
 .period-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 4px;
 }
 
 .period-label {
-  font-size: 12px;
+  font-size: clamp(10px, 1.6vw, 12px);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.03em;
 }
 
 .period-count {
-  font-size: 11px;
+  font-size: clamp(9px, 1.4vw, 11px);
   color: var(--text-secondary);
 }
 
 .period-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .period-empty {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-secondary);
   opacity: 0.5;
   padding: 2px 0;
 }
 
-/* 记录行 */
 .period-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: clamp(11px, 1.6vw, 13px);
+  flex-wrap: wrap;
 }
 
 .period-item .item-time {
   color: var(--text-secondary);
   flex-shrink: 0;
+  font-size: clamp(11px, 1.6vw, 13px);
 }
 
 .period-item .item-time .time-sep {
   opacity: 0.5;
 }
 
-/* 任务类型标签 */
 .type-tag {
-  font-size: 10px;
+  font-size: clamp(8px, 1.3vw, 10px);
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 100px;
   background: var(--accent-soft);
   color: var(--accent);
   flex-shrink: 0;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
-/* 操作按钮 */
 .detail-actions {
   display: flex;
   gap: 2px;
@@ -659,13 +700,13 @@ body {
 
 .detail-edit-btn,
 .detail-del-btn {
-  width: 24px;
-  height: 24px;
+  width: clamp(20px, 3.5vw, 24px);
+  height: clamp(20px, 3.5vw, 24px);
   border-radius: 50%;
   border: none;
   background: transparent;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1;
   display: flex;
   align-items: center;
@@ -687,22 +728,21 @@ body {
   color: var(--accent);
 }
 
-/* 编辑表单 */
 .detail-edit-form {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 4px;
+  font-size: 11px;
   flex-wrap: wrap;
-  padding: 6px 0;
-  margin-left: -4px;
+  padding: 4px 0;
+  margin-left: -2px;
 }
 
 .detail-edit-form .edit-type {
   font-family: var(--font);
-  font-size: 11px;
+  font-size: clamp(9px, 1.4vw, 11px);
   font-weight: 500;
-  padding: 4px 6px;
+  padding: 3px 5px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.7);
@@ -718,15 +758,15 @@ body {
 
 .detail-edit-form input[type="time"] {
   font-family: var(--font);
-  font-size: 12px;
-  padding: 4px 6px;
+  font-size: clamp(10px, 1.5vw, 12px);
+  padding: 3px 5px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-primary);
   outline: none;
   transition: border-color 0.2s ease;
-  width: 72px;
+  width: clamp(56px, 12vw, 68px);
 }
 
 .detail-edit-form input[type="time"]:focus {
@@ -735,15 +775,15 @@ body {
 
 .detail-edit-form .time-sep {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .detail-save-btn,
 .detail-cancel-btn {
   font-family: var(--font);
-  font-size: 11px;
+  font-size: clamp(9px, 1.4vw, 11px);
   font-weight: 500;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 100px;
   border: none;
   cursor: pointer;
@@ -769,17 +809,16 @@ body {
   color: var(--text-primary);
 }
 
-/* Footer */
 .detail-footer {
-  padding-top: 4px;
+  padding-top: 2px;
 }
 
 .detail-add-btn {
   display: block;
   width: 100%;
-  padding: 9px 0;
+  padding: clamp(6px, 1.2vw, 8px) 0;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: clamp(11px, 1.6vw, 13px);
   font-weight: 500;
   color: var(--accent);
   background: transparent;
@@ -796,29 +835,143 @@ body {
 }
 
 .detail-empty {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-secondary);
   opacity: 0.6;
 }
 
-/* ---------- 响应式 ---------- */
-@media (max-width: 440px) {
+/* ==============================
+   超小屏微调（宽度 ≤ 360px）
+   ============================== */
+@media (max-width: 360px) {
   .container {
-    padding: 32px 24px 28px;
-    gap: 22px;
+    width: 100%;
+    border-radius: 0;
+    padding: 12px 10px 10px;
+    gap: 4px;
+  }
+
+  body {
+    padding: 0;
   }
 
   .timer-ring {
-    width: 180px;
-    height: 180px;
+    --ring-w: clamp(110px, 30vw, 160px);
+    --ring-h: clamp(90px, 24vh, 160px);
+  }
+
+  .day-cell {
+    font-size: 10px;
+  }
+}
+
+/* ==============================
+   横屏适配（高度 ≤ 500px）
+   ============================== */
+@media (max-height: 500px) {
+  body {
+    align-items: flex-start;
+    padding: 4px;
+  }
+
+  .container {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    width: min(calc(100vw - 8px), 860px);
+    max-height: calc(100vh - 8px);
+    max-height: calc(100dvh - 8px);
+  }
+
+  .timer-section {
+    flex: 0 0 auto;
+    width: auto;
+    gap: 4px;
+  }
+
+  .timer-ring {
+    --ring-w: clamp(80px, 18vw, 140px);
+    --ring-h: clamp(70px, 35vh, 140px);
   }
 
   .timer-time {
-    font-size: 42px;
+    font-size: clamp(24px, 5vh, 36px);
   }
 
-  #toast {
-    width: calc(100vw - 24px);
-    border-radius: 0 0 14px 14px;
+  .mode-badge {
+    font-size: clamp(16px, 4vh, 24px);
+  }
+
+  .stats-section {
+    flex: 0 0 auto;
+    width: auto;
+    border: none;
+    padding: 4px 12px;
+  }
+
+  .calendar-section {
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .date-header,
+  .task-type-section,
+  .task-type-label {
+    display: none; /* 横屏时隐藏次要信息 */
+  }
+
+  .controls {
+    gap: 6px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 5px 14px;
+    font-size: 12px;
+  }
+}
+
+/* ==============================
+   大屏舒适尺寸
+   ============================== */
+@media (min-width: 768px) and (min-height: 600px) {
+  .container {
+    padding: clamp(32px, 6vw, 48px) clamp(28px, 6vw, 44px);
+  }
+
+  .day-cell {
+    font-size: clamp(12px, 1.6vw, 14px);
+  }
+}
+
+@media (min-width: 1200px) and (min-height: 700px) {
+  body {
+    padding: 24px;
+  }
+
+  .container {
+    max-width: 460px;
+  }
+}
+
+/* ==============================
+   触摸设备优化
+   ============================== */
+@media (hover: none) and (pointer: coarse) {
+  .cal-nav {
+    padding: 6px 14px;
+  }
+
+  .task-type-btn {
+    padding: 5px 14px;
+  }
+
+  .detail-edit-btn,
+  .detail-del-btn {
+    width: 26px;
+    height: 26px;
   }
 }
