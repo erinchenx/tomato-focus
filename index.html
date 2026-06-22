@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>番茄时钟</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- 日期 -->
+        <header class="date-header">
+            <div class="date-line" id="date-display"></div>
+        </header>
+
+        <!-- 计时器 -->
+        <section class="timer-section">
+            <div class="mode-badge" id="mode-badge">Focus</div>
+            <div class="timer-ring" id="timer-ring">
+                <div class="timer-time" id="timer">25:00</div>
+            </div>
+            <!-- 任务类型选择（空闲时可见，按钮由 JS 动态渲染） -->
+            <div class="task-type-section" id="task-type-section">
+                <div class="task-type-label">请选择专注类型</div>
+                <div class="task-type-row" id="task-type-row"></div>
+                <button class="btn-primary btn-start-focus" id="btn-start-focus">开始专注</button>
+            </div>
+            <!-- 专注中类型指示（运行中可见） -->
+            <div class="focus-type-indicator" id="focus-type-indicator" style="display:none;"></div>
+            <div class="controls" id="controls" style="display:none;">
+                <button class="btn-primary" id="start-pause-btn">暂停</button>
+                <button class="btn-secondary" id="reset-btn">重置</button>
+            </div>
+            <div class="persist-indicator" id="persist-indicator"></div>
+        </section>
+
+        <!-- 今日统计 -->
+        <section class="stats-section">
+            <div class="stat-item">
+                <span class="stat-label">今日专注</span>
+                <span class="stat-value" id="today-count">0</span>
+                <span class="stat-unit">个番茄钟</span>
+            </div>
+        </section>
+
+        <!-- 月历 -->
+        <section class="calendar-section">
+            <div class="calendar-header">
+                <button class="cal-nav" id="cal-prev">&lsaquo;</button>
+                <span class="cal-month" id="cal-month-label"></span>
+                <button class="cal-nav" id="cal-next">&rsaquo;</button>
+            </div>
+            <div class="calendar-grid">
+                <div class="weekday-row" id="weekday-row"></div>
+                <div class="days-row" id="days-grid"></div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 顶部通知卡片 -->
+    <div id="toast">
+        <div class="toast-icon">🍅</div>
+        <div class="toast-body">
+            <div class="toast-title">番茄时钟</div>
+            <div class="toast-message" id="notify-message">时间到！</div>
+        </div>
+        <button class="toast-close" id="toast-close-btn" aria-label="关闭">✕</button>
+    </div>
+
+    <!-- 日期详情浮窗 -->
+    <div id="day-detail">
+        <div class="detail-header">
+            <div class="detail-date" id="detail-date"></div>
+            <div class="detail-count" id="detail-count"></div>
+        </div>
+        <div class="detail-periods" id="detail-periods">
+            <!-- 上午 -->
+            <div class="period-block" data-period="上午">
+                <div class="period-header">
+                    <span class="period-label">上午</span>
+                    <span class="period-count">6:00 – 11:59</span>
+                </div>
+                <div class="period-list" id="period-morning"></div>
+            </div>
+            <!-- 下午 -->
+            <div class="period-block" data-period="下午">
+                <div class="period-header">
+                    <span class="period-label">下午</span>
+                    <span class="period-count">12:00 – 17:59</span>
+                </div>
+                <div class="period-list" id="period-afternoon"></div>
+            </div>
+            <!-- 晚间 -->
+            <div class="period-block" data-period="晚间">
+                <div class="period-header">
+                    <span class="period-label">晚间</span>
+                    <span class="period-count">18:00 – 次日 5:59</span>
+                </div>
+                <div class="period-list" id="period-evening"></div>
+            </div>
+        </div>
+        <div class="detail-footer">
+            <button class="detail-add-btn" id="detail-add-btn">+ 补记录番茄钟</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
