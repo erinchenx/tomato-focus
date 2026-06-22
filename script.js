@@ -369,6 +369,7 @@ function startTimer() {
 
       if (currentMode === "work") {
         recordFocus();
+        sessionStartTime = null; // 本段专注已结束，清空等待下一轮
         updateTodayCount();
         updateCalendar();
         currentMode = "break";
@@ -377,6 +378,7 @@ function startTimer() {
         updateTimerDisplay();
         startTimer();
       } else {
+        sessionStartTime = null; // 休息结束，清空准备新专注
         currentMode = "work";
         timeLeft = WORK;
         updateModeUI();
@@ -409,6 +411,7 @@ function resetTimer() {
   currentMode = "work";
   timeLeft = WORK;
   currentTaskType = "无类型";
+  sessionStartTime = null; // 重置：清除上次专注开始时间
   updateModeUI();
   updateTimerDisplay();
   renderTaskTypeRow();
@@ -567,9 +570,12 @@ function showDayDetail(dateKey, cell) {
 
 function positionDayDetail(cell) {
   const cellRect = cell.getBoundingClientRect();
-  let top = cellRect.top - 8;
-  let left = cellRect.left + cellRect.width / 2;
+  const detailWidth = dayDetail.offsetWidth || 320;
+  const halfDetail = detailWidth / 2;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
 
+  // 重置样式
   dayDetail.style.top = "auto";
   dayDetail.style.bottom = "auto";
   dayDetail.style.left = "auto";
@@ -578,14 +584,29 @@ function positionDayDetail(cell) {
   dayDetail.classList.add("show");
   const dh = dayDetail.offsetHeight;
 
+  // 纵向：优先显示在格子上方，空间不够则下方
+  let top = cellRect.top - 8;
   if (top - dh < 16) {
+    // 上方空间不足，改为下方
     top = cellRect.bottom + 8;
+    // 如果下方也溢出，贴近底部
+    if (top + dh > vh - 16) {
+      top = vh - dh - 16;
+    }
   } else {
     top = top - dh;
   }
+  // 确保不超出顶部
+  top = Math.max(8, top);
+
+  // 横向：居中于格子，但不超出屏幕边界
+  let left = cellRect.left + cellRect.width / 2;
+  const minLeft = halfDetail + 8;
+  const maxLeft = vw - halfDetail - 8;
+  left = Math.max(minLeft, Math.min(left, maxLeft));
 
   dayDetail.style.top = `${top}px`;
-  dayDetail.style.left = `${Math.max(16, Math.min(left, window.innerWidth - 176))}px`;
+  dayDetail.style.left = `${left}px`;
   dayDetail.style.transform = "translateX(-50%) translateY(0)";
 }
 
@@ -1049,6 +1070,7 @@ function init() {
             playAlarmSound();
             if (currentMode === "work") {
               recordFocus();
+              sessionStartTime = null; // 专注已结束，清空等待下一轮
               updateTodayCount();
               updateCalendar();
               currentMode = "break";
@@ -1057,6 +1079,7 @@ function init() {
               updateTimerDisplay();
               startTimer();
             } else {
+              sessionStartTime = null; // 休息结束，清空准备新专注
               currentMode = "work";
               timeLeft = WORK;
               updateModeUI();
