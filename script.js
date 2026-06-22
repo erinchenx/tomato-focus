@@ -399,10 +399,8 @@ function pauseTimer() {
   clearInterval(timer);
   timeLeft = Math.max(0, Math.round((endTime - Date.now()) / 1000));
   endTime = null;
-  // 恢复任务类型选择，隐藏控制按钮和专注指示
-  taskTypeSection.style.display = "";
-  controls.style.display = "none";
-  focusTypeIndicator.style.display = "none";
+  // 暂停后保持控制按钮可见，切换为"继续专注"
+  startPauseBtn.textContent = "继续专注";
   saveTimerState();
 }
 
@@ -416,6 +414,10 @@ function resetTimer() {
   updateTimerDisplay();
   renderTaskTypeRow();
   clearTimerState();
+  // 回到空闲状态：显示任务类型，隐藏控制按钮
+  taskTypeSection.style.display = "";
+  controls.style.display = "none";
+  focusTypeIndicator.style.display = "none";
 }
 
 // ── 今日统计 ──────────────────────────
@@ -936,6 +938,8 @@ startPauseBtn.addEventListener("click", () => {
   hideDayDetail();
   if (isRunning) {
     pauseTimer();
+  } else {
+    startTimer();
   }
 });
 
