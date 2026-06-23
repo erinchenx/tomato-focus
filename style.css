@@ -28,7 +28,7 @@
   --radius-sm: 10px;
   --radius: 16px;
   --radius-lg: 24px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font: "Dokdo", -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
 
   /*
     核心思路：所有尺寸由视口宽高中的较小者决定
@@ -93,7 +93,7 @@ body {
   min-height: clamp(280px, 55vh, 420px);
   width: 100%;
   gap: clamp(6px, 2 * var(--s), 16px);
-  overflow-y: auto;
+  overflow-y: visible;
 }
 
 /* ---------- 底部 Tab 栏 ---------- */
@@ -149,13 +149,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(6px, 2 * var(--s), 14px);
+  gap: clamp(14px, 4 * var(--s), 26px);
   width: 100%;
   flex-shrink: 0;
 }
 
 .mode-badge {
-  font-size: clamp(38px, 9 * var(--s), 56px);
+  font-size: clamp(53px, 12.6 * var(--s), 78px);
   font-weight: 600;
   font-family: "Dokdo", cursive;
   letter-spacing: 0.02em;
@@ -164,8 +164,8 @@ body {
 
 /* 计时环：同时受 vw 和 vh 约束，取较小值保证不溢出 */
 .timer-ring {
-  --ring-w: clamp(130px, 32vw, 240px);
-  --ring-h: clamp(110px, 28vh, 240px);
+  --ring-w: clamp(170px, 40vw, 290px);
+  --ring-h: clamp(155px, 36vh, 290px);
   width: min(var(--ring-w), var(--ring-h));
   height: min(var(--ring-w), var(--ring-h));
   border-radius: 50%;
@@ -184,11 +184,11 @@ body {
 }
 
 .timer-section.running .mode-badge {
-  font-size: clamp(48px, 11 * var(--s), 68px);
+  font-size: clamp(67px, 15.4 * var(--s), 95px);
 }
 
 .timer-section.running .timer-time {
-  font-size: clamp(40px, 9.5 * var(--s), 60px);
+  font-size: clamp(56px, 13.3 * var(--s), 84px);
 }
 
 .timer-section.running .btn-primary,
@@ -199,12 +199,13 @@ body {
 
 
 .timer-time {
-  font-size: clamp(34px, 8 * var(--s), 52px);
+  font-size: clamp(48px, 11.2 * var(--s), 73px);
   font-family: "Dokdo", cursive;
   font-weight: 400;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: #4a3f2e;
+  line-height: 1;
   user-select: none;
 }
 
@@ -372,7 +373,7 @@ body {
   display: flex;
   gap: clamp(8px, 2vw, 14px);
   flex-shrink: 0;
-  margin-top: clamp(4px, 1.5 * var(--s), 8px);
+  margin-top: clamp(12px, 3.5 * var(--s), 20px);
 }
 
 .btn-primary,
@@ -438,12 +439,12 @@ body {
 }
 
 .stat-label {
-  font-size: clamp(12px, 2 * var(--s), 14px);
+  font-size: clamp(14px, 2.4 * var(--s), 16px);
   color: var(--text-secondary);
 }
 
 .stat-value {
-  font-size: clamp(22px, 4 * var(--s), 30px);
+  font-size: clamp(28px, 5 * var(--s), 38px);
   font-weight: 500;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
@@ -451,7 +452,7 @@ body {
 }
 
 .stat-unit {
-  font-size: clamp(12px, 2 * var(--s), 14px);
+  font-size: clamp(14px, 2.4 * var(--s), 16px);
   color: var(--text-secondary);
 }
 
@@ -479,15 +480,15 @@ body {
 }
 
 .cal-stat-value {
-  font-size: clamp(22px, 3.8 * var(--s), 32px);
-  font-weight: 600;
+  font-size: clamp(30px, 5.4 * var(--s), 44px);
+  font-weight: 400;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
   line-height: 1.1;
 }
 
 .cal-stat-label {
-  font-size: clamp(13px, 2 * var(--s), 16px);
+  font-size: clamp(17px, 2.8 * var(--s), 20px);
   color: var(--text-secondary);
   letter-spacing: 0.03em;
   white-space: nowrap;
@@ -533,7 +534,7 @@ body {
 
 .cal-nav {
   font-family: var(--font);
-  font-size: clamp(16px, 3 * var(--s), 20px);
+  font-size: clamp(24px, 4.2 * var(--s), 32px);
   font-weight: 300;
   color: var(--text-secondary);
   background: none;
@@ -551,8 +552,8 @@ body {
 }
 
 .cal-month {
-  font-size: clamp(16px, 2.6 * var(--s), 22px);
-  font-weight: 600;
+  font-size: clamp(24px, 3.8 * var(--s), 34px);
+  font-weight: 400;
   color: #4a3f2e;
   letter-spacing: 0.03em;
 }
@@ -567,8 +568,8 @@ body {
 }
 
 .weekday-row span {
-  font-size: clamp(11px, 1.8 * var(--s), 14px);
-  font-weight: 500;
+  font-size: clamp(15px, 2.6 * var(--s), 18px);
+  font-weight: 400;
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -591,9 +592,9 @@ body {
   justify-content: center;
   align-items: center;
   border-radius: 50%;
-  font-size: clamp(13px, 2 * var(--s), 17px);
-  font-weight: 400;
-  color: var(--text-primary);
+  font-size: clamp(22px, 3.6 * var(--s), 28px);
+  font-weight: 300;
+  color: #6b5e4e;
   cursor: default;
   position: relative;
   transition: background 0.2s ease;
@@ -608,7 +609,7 @@ body {
 }
 
 .day-cell.today {
-  font-weight: 600;
+  font-weight: 400;
   color: var(--accent);
   background: var(--accent-soft);
 }
@@ -720,6 +721,7 @@ body {
 
 /* ---------- 日期详情浮窗 ---------- */
 #day-detail {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   position: fixed;
   z-index: 9998;
   background: rgba(255, 255, 255, 0.92);
@@ -1094,6 +1096,7 @@ body {
 
 /* Auth Modal 卡片 */
 .auth-modal {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(40px) saturate(180%);
   -webkit-backdrop-filter: blur(40px) saturate(180%);
@@ -1149,7 +1152,6 @@ body {
 
 .auth-tab {
   flex: 1;
-  font-family: var(--font);
   font-size: clamp(14px, 2.2 * var(--s), 16px);
   font-weight: 600;
   padding: 8px 0;
@@ -1179,7 +1181,6 @@ body {
 }
 
 .auth-input {
-  font-family: var(--font);
   font-size: clamp(13px, 2 * var(--s), 15px);
   padding: 10px 16px;
   border: 1px solid rgba(0, 0, 0, 0.12);
@@ -1209,7 +1210,6 @@ body {
 
 /* 提交按钮 */
 .auth-submit {
-  font-family: var(--font);
   font-size: clamp(13px, 2 * var(--s), 15px);
   font-weight: 500;
   padding: 10px 0;
@@ -1313,7 +1313,7 @@ body {
   }
 
   .day-cell {
-    font-size: 10px;
+    font-size: 13px;
   }
 }
 
@@ -1350,11 +1350,11 @@ body {
   }
 
   .timer-time {
-    font-size: clamp(24px, 5vh, 36px);
+    font-size: clamp(34px, 7vh, 50px);
   }
 
   .mode-badge {
-    font-size: clamp(20px, 5vh, 30px);
+    font-size: clamp(28px, 7vh, 42px);
   }
 
   .stats-section {
@@ -1395,7 +1395,7 @@ body {
   }
 
   .day-cell {
-    font-size: clamp(12px, 1.6vw, 14px);
+    font-size: clamp(18px, 2.6vw, 24px);
   }
 }
 
