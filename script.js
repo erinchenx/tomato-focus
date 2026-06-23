@@ -59,7 +59,9 @@ const detailPeriods = document.getElementById("detail-periods");
 const periodMorning = document.getElementById("period-morning");
 const periodAfternoon = document.getElementById("period-afternoon");
 const periodEvening = document.getElementById("period-evening");
+const periodDawn = document.getElementById("period-dawn");
 const persistIndicator = document.getElementById("persist-indicator");
+const timerSection = document.querySelector(".timer-section");
 const taskTypeSection = document.getElementById("task-type-section");
 const taskTypeRow = document.getElementById("task-type-row");
 const focusTypeIndicator = document.getElementById("focus-type-indicator");
@@ -280,19 +282,49 @@ function renderTaskTypeRow() {
     <input type="text" class="task-type-input" id="task-type-input" placeholder="输入类型…" maxlength="8" style="display:none;">`;
 }
 
+// 检查番茄钟时间是否与已有记录重叠（不允许时间重复）
+function hasTimeOverlap(dateKey, start, end, excludeIndex) {
+  const sessions = getFocusSessions(dateKey);
+  for (let i = 0; i < sessions.length; i++) {
+    if (i === excludeIndex) continue;
+    const s = sessions[i];
+    if (!s || !s.start || !s.end) continue;
+    // 两个时间段有交集即为重叠
+    if (start < s.end && end > s.start) return true;
+  }
+  return false;
+}
+
 function recordFocus() {
   const key = getDateKey();
+  const start = sessionStartTime;
+  const end = Date.now();
+
+  // 检查时间重叠，防止重复记录
+  if (hasTimeOverlap(key, start, end, -1)) {
+    console.warn("[番茄时钟] 检测到重复番茄钟，已跳过记录:", new Date(start).toLocaleTimeString());
+    persistIndicator.textContent = "⚠️ 该时段已有记录，已跳过";
+    persistIndicator.className = "persist-indicator warn";
+    return;
+  }
+
   if (!Array.isArray(focusData[key])) focusData[key] = [];
   const type = currentTaskType || "无类型";
   const note = currentNote.trim();
   focusData[key].push({
-    start: sessionStartTime,
-    end: Date.now(),
+    start: start,
+    end: end,
     type: type,
     note: note || "",
   });
   addCustomType(type);
   saveFocusData();
+
+  // 显示记录成功（含系统时间，确认检查通过）
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  persistIndicator.textContent = `✓ 已记录 · ${timeStr}`;
+  persistIndicator.className = "persist-indicator restored";
 }
 
 function getTodayFocus() {
@@ -387,6 +419,7 @@ function updateModeUI() {
 function startTimer() {
   isRunning = true;
   startPauseBtn.textContent = "暂停";
+  timerSection.classList.add("running");
   if (currentMode === "work" && !sessionStartTime) {
     sessionStartTime = Date.now();
   }
@@ -459,6 +492,7 @@ function resetTimer() {
   renderTaskTypeRow();
   clearTimerState();
   // 回到空闲状态：显示任务类型，隐藏控制按钮
+  timerSection.classList.remove("running");
   taskTypeSection.style.display = "";
   controls.style.display = "none";
   focusTypeIndicator.style.display = "none";
@@ -509,6 +543,42 @@ function updateCalendar(year, month) {
   }
 
   daysGrid.innerHTML = html;
+  updateCalendarStats();
+}
+
+function updateCalendarStats() {
+  const now = new Date();
+  const year = calYear ?? now.getFullYear();
+  const month = calMonth ?? now.getMonth() + 1;
+
+  let totalMinutes = 0;
+  let totalPomos = 0;
+  let focusedDays = 0;
+
+  for (const [key, sessions] of Object.entries(focusData)) {
+    const [ky, km] = key.split("-").map(Number);
+    if (ky !== year || km !== month) continue;
+    if (!Array.isArray(sessions) || sessions.length === 0) continue;
+
+    focusedDays++;
+    totalPomos += sessions.length;
+
+    for (const s of sessions) {
+      if (s && s.start && s.end) {
+        totalMinutes += (s.end - s.start) / 60;
+      } else {
+        totalMinutes += 25; // 默认一个番茄钟（25分钟）
+      }
+    }
+  }
+
+  const totalHours = totalMinutes / 60;
+  const activeDays = Math.max(focusedDays, 1);
+
+  const avgPomos = (totalPomos / activeDays).toFixed(1);
+
+  document.getElementById("cal-stat-days").textContent = focusedDays;
+  document.getElementById("cal-stat-avg-pomos").textContent = avgPomos;
 }
 
 // ── 日期点击 → 详情浮窗 ────────────────
@@ -519,12 +589,13 @@ function getPeriod(ts) {
   const h = new Date(ts).getHours();
   if (h >= 6 && h < 12) return "上午";
   if (h >= 12 && h < 18) return "下午";
-  return "晚间"; // 18-23 及 0-5
+  if (h >= 18) return "晚间";
+  return "凌晨"; // 0-5
 }
 
 // 将 sessions 按上午/下午/晚间分组，组内按开始时间排序
 function groupSessionsByPeriod(sessions) {
-  const groups = { "上午": [], "下午": [], "晚间": [] };
+  const groups = { "上午": [], "下午": [], "晚间": [], "凌晨": [] };
   sessions.forEach((s, i) => {
     const period = getPeriod(s ? s.start : null);
     groups[period].push({ ...s, _globalIndex: i });
@@ -574,7 +645,8 @@ function renderPeriodItem(s, i) {
 function getPeriodListEl(period) {
   if (period === "上午") return periodMorning;
   if (period === "下午") return periodAfternoon;
-  return periodEvening;
+  if (period === "晚间") return periodEvening;
+  return periodDawn;
 }
 
 function showDayDetail(dateKey, cell) {
@@ -590,11 +662,11 @@ function showDayDetail(dateKey, cell) {
   const groups = groupSessionsByPeriod(sessions);
 
   // 渲染每个时段
-  ["上午", "下午", "晚间"].forEach(period => {
+  ["上午", "下午", "晚间", "凌晨"].forEach(period => {
     const list = getPeriodListEl(period);
     const items = groups[period];
     const countEl = list.parentElement.querySelector(".period-count");
-    const timeRange = period === "上午" ? "6:00 – 11:59" : period === "下午" ? "12:00 – 17:59" : "18:00 – 次日 5:59";
+    const timeRange = period === "上午" ? "6:00 – 12:00" : period === "下午" ? "12:00 – 18:00" : period === "晚间" ? "18:00 – 次日 0:00" : "0:00 – 6:00";
 
     if (items.length === 0) {
       countEl.textContent = timeRange + " · 无";
@@ -705,8 +777,12 @@ function startEditSession(dateKey, index) {
 
   let formEl;
   if (isNew) {
-    // 新增：插入到晚间时段末尾（或唯一可见时段）
-    const targetList = periodEvening.querySelector(".period-empty") ? periodEvening : periodEvening;
+    // 新增：根据当前时间插入到对应时段末尾
+    const targetPeriod = getPeriod(Date.now());
+    const targetList = getPeriodListEl(targetPeriod);
+    if (targetList.querySelector(".period-empty")) {
+      targetList.innerHTML = ""; // 清除占位
+    }
     targetList.insertAdjacentHTML("beforeend", formHtml);
     formEl = targetList.querySelector(".detail-edit-form");
   } else {
@@ -744,9 +820,14 @@ function saveEditSession(dateKey, index, startStr, endStr, type, note) {
     return;
   }
   const start = timeToTimestamp(dateKey, startStr);
-  const end = timeToTimestamp(dateKey, endStr);
-  if (start >= end) {
-    alert("结束时间必须晚于开始时间");
+  let end = timeToTimestamp(dateKey, endStr);
+  // 跨午夜：结束时间在开始时间之前或相同 → 自动加一天
+  if (end <= start) {
+    end += 24 * 3600000;
+  }
+  // 检查时间是否与已有记录重叠
+  if (hasTimeOverlap(dateKey, start, end, index >= 0 ? index : -1)) {
+    alert("该时段与已有番茄钟记录重叠，请调整时间");
     return;
   }
   if (index >= 0) {
@@ -1320,6 +1401,19 @@ async function handleAuthSubmit(e) {
     return;
   }
 
+  // 确保 Supabase 已初始化（如果之前初始化失败则重试）
+  if (!supabase) {
+    authSubmit.disabled = true;
+    authSubmit.textContent = "连接中…";
+    const ok = await initSupabase();
+    if (!ok || !supabase) {
+      authError.textContent = "无法连接服务器，请检查网络后刷新页面重试";
+      authSubmit.disabled = false;
+      authSubmit.textContent = "登录";
+      return;
+    }
+  }
+
   authError.textContent = "";
   authSubmit.disabled = true;
   authSubmit.textContent = "登录中…";
@@ -1446,6 +1540,50 @@ function init() {
       }
     });
 
+    // 固定容器高度：以空闲态（taskTypeSection 可见，最高）为基准，避免切换时跳动
+    const container = document.querySelector(".container");
+    let pinnedContainerHeight = 0;
+
+    function pinContainerHeight() {
+      // 临时确保 taskTypeSection 可见、controls 隐藏（空闲态，最高）
+      const ts = taskTypeSection.style.display;
+      const cs = controls.style.display;
+      const fi = focusTypeIndicator.style.display;
+      taskTypeSection.style.display = "";
+      controls.style.display = "none";
+      focusTypeIndicator.style.display = "none";
+
+      pinnedContainerHeight = container.offsetHeight;
+      container.style.minHeight = pinnedContainerHeight + "px";
+
+      // 恢复原始状态
+      taskTypeSection.style.display = ts;
+      controls.style.display = cs;
+      focusTypeIndicator.style.display = fi;
+    }
+
+    let resizeDebounce;
+    window.addEventListener("resize", () => {
+      clearTimeout(resizeDebounce);
+      resizeDebounce = setTimeout(() => {
+        container.style.minHeight = "";
+        pinContainerHeight();
+      }, 200);
+    });
+
+    // Tab 切换
+    const dateHeader = document.querySelector(".date-header");
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        document.getElementById("tab-timer").style.display = tab === "timer" ? "" : "none";
+        document.getElementById("tab-calendar").style.display = tab === "calendar" ? "" : "none";
+        dateHeader.style.display = tab === "calendar" ? "none" : "";
+      });
+    });
+
     loadFocusData();
     loadTypeData();
     renderTaskTypeRow();
@@ -1517,6 +1655,7 @@ function init() {
         updateTimerDisplay();
         // 恢复暂停时的按钮UI：根据模式显示"继续专注"或"继续休息"
         startPauseBtn.textContent = currentMode === "work" ? "继续专注" : "继续休息";
+        timerSection.classList.add("running");
         taskTypeSection.style.display = "none";
         controls.style.display = "";
         focusTypeIndicator.style.display = "none";
@@ -1532,6 +1671,13 @@ function init() {
       updateTimerDisplay();
       updateModeUI();
     }
+
+    // 等 DOM 布局稳定后测量并固定容器高度
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        pinContainerHeight();
+      });
+    });
   } catch (e) {
     console.error("[番茄时钟] 初始化出错:", e);
     persistIndicator.textContent = "初始化出错，查看控制台";

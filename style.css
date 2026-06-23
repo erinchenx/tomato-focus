@@ -34,7 +34,7 @@
     核心思路：所有尺寸由视口宽高中的较小者决定
     --s = min(1vw, 1vh) 的倍数，确保横屏/竖屏都能装下
   */
-  --s: min(1vw, 1vh);
+  --s: min(1.15vw, 1.15vh);
 }
 
 body {
@@ -84,6 +84,53 @@ body {
   overflow: hidden;
 }
 
+/* ---------- Tab 视图 ---------- */
+.tab-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  min-height: clamp(280px, 55vh, 420px);
+  width: 100%;
+  gap: clamp(6px, 2 * var(--s), 16px);
+  overflow-y: auto;
+}
+
+/* ---------- 底部 Tab 栏 ---------- */
+.tab-bar {
+  display: flex;
+  flex-shrink: 0;
+  width: 100%;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+  padding-top: clamp(4px, 1.5 * var(--s), 8px);
+  gap: 4px;
+}
+
+.tab-btn {
+  flex: 1;
+  font-family: var(--font);
+  font-size: clamp(12px, 2 * var(--s), 14px);
+  font-weight: 500;
+  padding: clamp(6px, 1.5 * var(--s), 10px) 0;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  letter-spacing: 0.03em;
+}
+
+.tab-btn.active {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.tab-btn:hover {
+  color: var(--text-primary);
+}
+
 /* ---------- 日期 ---------- */
 .date-header {
   text-align: center;
@@ -108,9 +155,9 @@ body {
 }
 
 .mode-badge {
-  font-size: clamp(22px, 5 * var(--s), 32px);
+  font-size: clamp(38px, 9 * var(--s), 56px);
   font-weight: 600;
-  font-family: "Marker Felt", "Comic Sans MS", cursive, sans-serif;
+  font-family: "Futura", "Trebuchet MS", "Century Gothic", sans-serif;
   letter-spacing: 0.02em;
   color: var(--accent);
 }
@@ -127,7 +174,23 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: border-color 0.6s ease, background 0.6s ease;
+  transition: width 0.3s ease, height 0.3s ease, border-color 0.6s ease, background 0.6s ease;
+}
+
+/* 运行中时钟放大 */
+.timer-section.running .timer-ring {
+  --ring-w: clamp(200px, 44vw, 330px);
+  --ring-h: clamp(180px, 40vh, 330px);
+}
+
+.timer-section.running .timer-time {
+  font-size: clamp(40px, 9.5 * var(--s), 60px);
+}
+
+.timer-section.running .btn-primary,
+.timer-section.running .btn-secondary {
+  font-size: clamp(15px, 2.4 * var(--s), 18px);
+  padding: clamp(9px, 2 * var(--s), 13px) clamp(24px, 5 * var(--s), 34px);
 }
 
 
@@ -156,6 +219,7 @@ body {
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.04em;
+  padding: clamp(2px, 1.5 * var(--s), 6px) 0 clamp(2px, 0.5 * var(--s), 6px);
 }
 
 .task-type-row {
@@ -167,7 +231,7 @@ body {
 }
 
 .btn-start-focus {
-  margin-top: 4px;
+  margin-top: clamp(4px, 1.5 * var(--s), 8px);
   width: 100%;
 }
 
@@ -184,6 +248,7 @@ body {
   width: 100%;
   transition: border-color 0.2s ease;
   text-align: center;
+
 }
 
 .task-note-input:focus {
@@ -295,12 +360,14 @@ body {
 .persist-indicator.restored { color: var(--text-secondary); }
 .persist-indicator.default { color: var(--text-secondary); opacity: 0.5; }
 .persist-indicator.error { color: var(--accent); }
+.persist-indicator.warn { color: #e6a817; }
 
 /* ---------- 按钮 ---------- */
 .controls {
   display: flex;
   gap: clamp(8px, 2vw, 14px);
   flex-shrink: 0;
+  margin-top: clamp(4px, 1.5 * var(--s), 8px);
 }
 
 .btn-primary,
@@ -355,6 +422,7 @@ body {
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
+  margin-top: auto;
 }
 
 .stat-item {
@@ -380,6 +448,45 @@ body {
 .stat-unit {
   font-size: clamp(12px, 2 * var(--s), 14px);
   color: var(--text-secondary);
+}
+
+/* ---------- 月历统计 ---------- */
+.calendar-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: clamp(2px, 0.5 * var(--s), 6px);
+  width: 100%;
+  flex-shrink: 0;
+  padding: clamp(8px, 2 * var(--s), 14px) clamp(8px, 2 * var(--s), 14px);
+  margin: clamp(6px, 2 * var(--s), 14px) 0 0;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: clamp(8px, 2 * var(--s), 14px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.cal-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 100%;
+}
+
+.cal-stat-value {
+  font-size: clamp(22px, 3.8 * var(--s), 32px);
+  font-weight: 600;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+
+.cal-stat-label {
+  font-size: clamp(13px, 2 * var(--s), 16px);
+  color: var(--text-secondary);
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  line-height: 1.1;
 }
 
 /* ---------- 月历 ---------- */
@@ -413,6 +520,8 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  padding: clamp(6px, 2 * var(--s), 14px) 0;
+  margin-top: clamp(8px, 3 * var(--s), 20px);
   margin-bottom: clamp(4px, 1.5 * var(--s), 10px);
   flex-shrink: 0;
 }
@@ -437,7 +546,7 @@ body {
 }
 
 .cal-month {
-  font-size: clamp(13px, 2 * var(--s), 15px);
+  font-size: clamp(16px, 2.6 * var(--s), 22px);
   font-weight: 600;
   color: var(--text-primary);
   letter-spacing: 0.03em;
@@ -453,7 +562,7 @@ body {
 }
 
 .weekday-row span {
-  font-size: clamp(9px, 1.5 * var(--s), 11px);
+  font-size: clamp(11px, 1.8 * var(--s), 14px);
   font-weight: 500;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -477,7 +586,7 @@ body {
   justify-content: center;
   align-items: center;
   border-radius: 50%;
-  font-size: clamp(10px, 1.6 * var(--s), 13px);
+  font-size: clamp(13px, 2 * var(--s), 17px);
   font-weight: 400;
   color: var(--text-primary);
   cursor: default;
@@ -1240,7 +1349,7 @@ body {
   }
 
   .mode-badge {
-    font-size: clamp(16px, 4vh, 24px);
+    font-size: clamp(20px, 5vh, 30px);
   }
 
   .stats-section {

@@ -17,12 +17,17 @@
             <button class="auth-btn" id="auth-btn" title="登录同步数据">👤</button>
         </header>
 
+        <!-- Tab 视图：计时器 -->
+        <div class="tab-view" id="tab-timer">
+
         <!-- 计时器 -->
         <section class="timer-section">
             <div class="mode-badge" id="mode-badge">Focus</div>
             <div class="timer-ring" id="timer-ring">
                 <div class="timer-time" id="timer">25:00</div>
             </div>
+            <!-- 操作区：保持高度稳定，避免页面抖动 -->
+            <div class="timer-actions" id="timer-actions">
             <!-- 任务类型选择（空闲时可见，按钮由 JS 动态渲染） -->
             <div class="task-type-section" id="task-type-section">
                 <div class="task-type-label">请选择专注类型</div>
@@ -36,6 +41,7 @@
                 <button class="btn-primary" id="start-pause-btn">暂停</button>
                 <button class="btn-secondary" id="reset-btn">重置</button>
             </div>
+            </div><!-- /timer-actions -->
             <div class="persist-indicator" id="persist-indicator"></div>
         </section>
 
@@ -47,6 +53,23 @@
                 <span class="stat-unit">个番茄钟</span>
             </div>
         </section>
+
+        </div><!-- /tab-timer -->
+
+        <!-- Tab 视图：日历 -->
+        <div class="tab-view" id="tab-calendar" style="display:none;">
+
+        <!-- 月历统计 -->
+        <div class="calendar-stats" id="calendar-stats">
+            <div class="cal-stat-item">
+                <span class="cal-stat-value" id="cal-stat-days">0</span>
+                <span class="cal-stat-label">本月专注天数</span>
+            </div>
+            <div class="cal-stat-item">
+                <span class="cal-stat-value" id="cal-stat-avg-pomos">0</span>
+                <span class="cal-stat-label">日均番茄钟</span>
+            </div>
+        </div>
 
         <!-- 月历 -->
         <section class="calendar-section">
@@ -60,6 +83,14 @@
                 <div class="days-row" id="days-grid"></div>
             </div>
         </section>
+
+        </div><!-- /tab-calendar -->
+
+        <!-- 底部 Tab 栏 -->
+        <nav class="tab-bar">
+            <button class="tab-btn active" data-tab="timer">计时</button>
+            <button class="tab-btn" data-tab="calendar">日历</button>
+        </nav>
     </div>
 
     <!-- 顶部通知卡片 -->
@@ -83,7 +114,7 @@
             <div class="period-block" data-period="上午">
                 <div class="period-header">
                     <span class="period-label">上午</span>
-                    <span class="period-count">6:00 – 11:59</span>
+                    <span class="period-count">6:00 – 12:00</span>
                 </div>
                 <div class="period-list" id="period-morning"></div>
             </div>
@@ -91,7 +122,7 @@
             <div class="period-block" data-period="下午">
                 <div class="period-header">
                     <span class="period-label">下午</span>
-                    <span class="period-count">12:00 – 17:59</span>
+                    <span class="period-count">12:00 – 18:00</span>
                 </div>
                 <div class="period-list" id="period-afternoon"></div>
             </div>
@@ -99,9 +130,17 @@
             <div class="period-block" data-period="晚间">
                 <div class="period-header">
                     <span class="period-label">晚间</span>
-                    <span class="period-count">18:00 – 次日 5:59</span>
+                    <span class="period-count">18:00 – 次日 0:00</span>
                 </div>
                 <div class="period-list" id="period-evening"></div>
+            </div>
+            <!-- 凌晨 -->
+            <div class="period-block" data-period="凌晨">
+                <div class="period-header">
+                    <span class="period-label">凌晨</span>
+                    <span class="period-count">0:00 – 5:59</span>
+                </div>
+                <div class="period-list" id="period-dawn"></div>
             </div>
         </div>
         <div class="detail-footer">
