@@ -389,6 +389,24 @@ body {
   min-height: 0;   /* flex 子项默认 min-height: auto，重置以允许收缩 */
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+/* 日历滚动条隐形 */
+.calendar-section::-webkit-scrollbar {
+  width: 3px;
+}
+.calendar-section::-webkit-scrollbar-track {
+  background: transparent;
+}
+.calendar-section::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+}
+.calendar-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .calendar-header {
