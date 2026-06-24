@@ -365,8 +365,12 @@ function recordFocus() {
   // 检查时间重叠，防止重复记录
   if (hasTimeOverlap(key, start, end, -1)) {
     console.warn("[番茄时钟] 检测到重复番茄钟，已跳过记录:", new Date(start).toLocaleTimeString());
-    persistIndicator.textContent = "⚠️ 该时段已有记录，已跳过";
-    persistIndicator.className = "persist-indicator warn";
+    // 独立 toast：不依赖 showNotification，避免状态冲突
+    notifyMessage.textContent = "⚠️ 该时段已有记录，已跳过";
+    toast.classList.remove("show");
+    void toast.offsetWidth;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 1500);
     return;
   }
 
@@ -382,11 +386,6 @@ function recordFocus() {
   addCustomType(type);
   saveFocusData();
 
-  // 显示记录成功（含系统时间，确认检查通过）
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  persistIndicator.textContent = `✓ 已记录 · ${timeStr}`;
-  persistIndicator.className = "persist-indicator restored";
 }
 
 function getTodayFocus() {
@@ -1064,7 +1063,7 @@ function playAlarmSound() {
   playChime(3);
 }
 
-function showNotification(msg) {
+function showNotification(msg, duration = 3300) {
   notifyMessage.textContent = msg;
 
   // 清除旧定时器
@@ -1097,7 +1096,7 @@ function showNotification(msg) {
   toast._onClose = hide;
 
   // 提示音结束后自动消失（3 秒叮咚 + 0.3 秒余量）
-  toast._autoHideId = setTimeout(hide, 3300);
+  toast._autoHideId = setTimeout(hide, duration);
 }
 
 function playChime(durationSec) {
@@ -1483,7 +1482,7 @@ function updateAuthUI() {
     authFormSection.style.display = "none";
     authLoggedIn.style.display = "";
   } else {
-    authBtn.textContent = "👤";
+    authBtn.innerHTML = '<svg width="16" height="16" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg"><ellipse cx="10" cy="6" rx="4" ry="4.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/><path d="M5.5 11c-1 2-1.5 4-1 6.5.1.3.4.5.7.5h9.6c.3 0 .6-.2.7-.5.5-2.5 0-4.5-1-6.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/></svg>';
     authBtn.title = "登录同步数据";
     authBtn.classList.remove("logged-in");
     authFormSection.style.display = "";
