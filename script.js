@@ -196,7 +196,53 @@ function loadFocusData() {
   }
 }
 
+function cleanFocusDataOverlaps() {
+  let removed = 0;
+  for (const [dateKey, sessions] of Object.entries(focusData)) {
+    if (!Array.isArray(sessions) || sessions.length < 2) continue;
+
+    // 收集有效索引（非 null，有 start/end），按 start 排序
+    const valid = sessions
+      .map((s, i) => ({ s, i }))
+      .filter(({ s }) => s && s.start && s.end)
+      .sort((a, b) => a.s.start - b.s.start);
+
+    const toRemove = new Set();
+
+    for (let ai = 0; ai < valid.length; ai++) {
+      if (toRemove.has(valid[ai].i)) continue;
+      const a = valid[ai].s;
+
+      for (let bj = ai + 1; bj < valid.length; bj++) {
+        if (toRemove.has(valid[bj].i)) continue;
+        const b = valid[bj].s;
+
+        // 时间段重叠
+        if (a.start < b.end && b.start < a.end) {
+          // 保留第一条（先记录的），移除后出现的重复
+          toRemove.add(valid[bj].i);
+          console.log("[番茄时钟] 本地去重（时间重叠）:", dateKey,
+            timestampToTimeString(b.start), "-", timestampToTimeString(b.end),
+            "(被移除，与", timestampToTimeString(a.start), "-", timestampToTimeString(a.end), "重叠)");
+        }
+      }
+    }
+
+    if (toRemove.size > 0) {
+      // 从后往前删，保持索引不偏移
+      const sorted = [...toRemove].sort((a, b) => b - a);
+      sorted.forEach(i => sessions.splice(i, 1));
+      removed += sorted.length;
+      if (sessions.length === 0) delete focusData[dateKey];
+    }
+  }
+  if (removed > 0) {
+    console.log("[番茄时钟] 本地去重完成，共移除", removed, "条重复记录");
+  }
+}
+
 function saveFocusData() {
+  cleanFocusDataOverlaps();
   localStorage.setItem("focusData", JSON.stringify(focusData));
   if (currentUser) { syncDirty = true; schedulePush(); }
 }
@@ -288,9 +334,20 @@ function hasTimeOverlap(dateKey, start, end, excludeIndex) {
   for (let i = 0; i < sessions.length; i++) {
     if (i === excludeIndex) continue;
     const s = sessions[i];
-    if (!s || !s.start || !s.end) continue;
+    if (!s) continue;
+    // 如果旧记录缺少时间信息（null），新记录有时会被误判为非重叠
+    // 保守策略：如果旧数据没有 start/end，视为未知，不跳过，用宽松匹配
+    if (!s.start || !s.end) {
+      // 旧数据无时间：如果新记录也没有 start/end → 视为重复
+      if (!start || !end) return true;
+      // 新记录有时间但旧数据无时间：无法判断，跳过（保留旧数据不阻碍新记录）
+      continue;
+    }
+    // 新记录缺少时间：只要旧记录有时间，按宽松比较（start==null 当作 0 处理）
+    const a = start ?? 0;
+    const b = end ?? 0;
     // 两个时间段有交集即为重叠
-    if (start < s.end && end > s.start) return true;
+    if (a < s.end && b > s.start) return true;
   }
   return false;
 }
@@ -339,6 +396,11 @@ function getFocusSessions(dateKey) {
 
 function addFocusSession(dateKey, start, end, type, note) {
   if (!Array.isArray(focusData[dateKey])) focusData[dateKey] = [];
+  // 防御性检查：防止添加时间重叠的记录
+  if (start && end && hasTimeOverlap(dateKey, start, end, -1)) {
+    console.warn("[番茄时钟] addFocusSession 检测到重复番茄钟，已跳过:", dateKey, timestampToTimeString(start));
+    return;
+  }
   focusData[dateKey].push({ start, end, type: type || "无类型", note: note || "" });
   saveFocusData();
 }
@@ -1205,7 +1267,7 @@ async function pullFromCloud() {
       });
     }
 
-    // 合并：本地 + 云端（union，云端优先）
+    // 合并：本地 + 云端（union，云端优先），含时间重叠检测
     const merged = {};
     const allKeys = new Set([...Object.keys(focusData), ...Object.keys(cloudFocus)]);
 
@@ -1214,26 +1276,75 @@ async function pullFromCloud() {
       const cloud = cloudFocus[key] || [];
       const sessionMap = new Map();
 
+      function makeKey(s) {
+        // 精确键：start + end + type — 用于完全一致的快速去重
+        return `${s.start ?? "null"}_${s.end ?? "null"}_${s.type || ""}`;
+      }
+
       // 先放本地
       local.forEach((s, i) => {
         if (!s) return;
-        const id = `${s.start ?? "null"}_${s.end ?? "null"}_${s.type || ""}`;
-        sessionMap.set(id, { ...s, _localIdx: i });
+        sessionMap.set(makeKey(s), { ...s, _updated_at: 0, _localIdx: i });
       });
 
       // 云端覆盖（updated_at 更新者胜）
       cloud.forEach(s => {
-        const id = `${s.start ?? "null"}_${s.end ?? "null"}_${s.type || ""}`;
-        const existing = sessionMap.get(id);
+        const k = makeKey(s);
+        const existing = sessionMap.get(k);
         if (!existing || (s._updated_at || 0) > (existing._updated_at || 0)) {
-          sessionMap.set(id, s);
+          sessionMap.set(k, { ...s, _localIdx: -1 });
         }
       });
 
-      merged[key] = Array.from(sessionMap.values()).map(s => {
-        const { _updated_at, _localIdx, ...clean } = s;
-        return clean;
+      // ── 时间重叠去重（第二轮）：检测 key 不同但时间段重叠的记录 ──
+      let entries = Array.from(sessionMap.values());
+      const toRemove = new Set();
+
+      // 按 start 排序（null 排最前）
+      entries.sort((a, b) => {
+        if (a.start == null && b.start == null) return 0;
+        if (a.start == null) return -1;
+        if (b.start == null) return 1;
+        return a.start - b.start;
       });
+
+      for (let i = 0; i < entries.length; i++) {
+        if (toRemove.has(i)) continue;
+        const a = entries[i];
+        // 缺少时间信息的记录不参与重叠去重（保守：保留不删）
+        if (!a.start || !a.end) continue;
+
+        for (let j = i + 1; j < entries.length; j++) {
+          if (toRemove.has(j)) continue;
+          const b = entries[j];
+          if (!b.start || !b.end) continue;
+
+          // 检查时间段是否重叠
+          if (a.start < b.end && b.start < a.end) {
+            // 重叠！保留 updated_at 更新的，或云端数据（_localIdx === -1）
+            const aIsCloud = a._localIdx === -1;
+            const bIsCloud = b._localIdx === -1;
+            const aTime = a._updated_at || 0;
+            const bTime = b._updated_at || 0;
+
+            if (bTime > aTime || (bIsCloud && !aIsCloud)) {
+              toRemove.add(i);
+              console.log("[番茄时钟] 云端合并去重（时间重叠）:", key, timestampToTimeString(a.start), "-", timestampToTimeString(a.end), "被", timestampToTimeString(b.start), "-", timestampToTimeString(b.end), "替代");
+              break; // a 已移除，跳出内层循环
+            } else {
+              toRemove.add(j);
+              console.log("[番茄时钟] 云端合并去重（时间重叠）:", key, timestampToTimeString(b.start), "-", timestampToTimeString(b.end), "被", timestampToTimeString(a.start), "-", timestampToTimeString(a.end), "替代");
+            }
+          }
+        }
+      }
+
+      merged[key] = entries
+        .filter((_, i) => !toRemove.has(i))
+        .map(s => {
+          const { _updated_at, _localIdx, ...clean } = s;
+          return clean;
+        });
     }
 
     focusData = merged;
@@ -1325,6 +1436,7 @@ function schedulePush() {
 
 // 仅写 localStorage（不触发云端推送，用于拉取合并后）
 function saveFocusDataLocal() {
+  cleanFocusDataOverlaps();
   localStorage.setItem("focusData", JSON.stringify(focusData));
 }
 
@@ -1585,6 +1697,7 @@ function init() {
     });
 
     loadFocusData();
+    cleanFocusDataOverlaps(); // 清理本地已有的重复数据
     loadTypeData();
     renderTaskTypeRow();
     buildWeekdayRow();
