@@ -158,11 +158,12 @@
             <!-- 未登录 -->
             <div id="auth-form-section">
                 <div class="auth-tabs">
-                    <button class="auth-tab active">登录 / 注册</button>
+                    <button class="auth-tab active" id="auth-tab-login">登录</button>
+                    <button class="auth-tab" id="auth-tab-register">注册</button>
                 </div>
-                <div class="auth-subtitle">新用户将自动注册</div>
                 <form id="auth-form">
                     <input class="auth-input" type="email" id="auth-email" placeholder="邮箱地址" required autocomplete="email">
+                    <input class="auth-input" type="text" id="auth-display-name" placeholder="昵称（可选）" maxlength="20" autocomplete="name" style="display:none;">
                     <input class="auth-input" type="password" id="auth-password" placeholder="密码（至少6位）" required minlength="6" autocomplete="current-password">
                     <div class="auth-error" id="auth-error"></div>
                     <button class="auth-submit" type="submit" id="auth-submit">登录</button>
@@ -171,6 +172,10 @@
             <!-- 已登录 -->
             <div id="auth-logged-in" style="display:none;">
                 <div class="auth-avatar" id="auth-avatar"></div>
+                <div class="auth-name-row" id="auth-name-row">
+                    <span class="auth-display-name" id="auth-display-name-text" title="点击修改昵称"></span>
+                    <input class="auth-input auth-name-edit-input" id="auth-name-edit-input" maxlength="20" placeholder="输入昵称" style="display:none;">
+                </div>
                 <div class="auth-user-email" id="auth-user-email"></div>
                 <div class="auth-sync-status" id="auth-sync-status">已同步 ✓</div>
                 <button class="auth-submit" id="auth-force-sync">立即同步</button>

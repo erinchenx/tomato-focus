@@ -67,8 +67,10 @@ body {
   box-shadow: var(--shadow-lg), var(--shadow-sm);
   border: 1px solid rgba(255, 255, 255, 0.6);
 
-  /* 宽高均不超视口 */
+  /* 宽高均不超视口，固定高度保证 tab 切换时容器等高 */
   width: min(calc(100vw - 16px), 480px);
+  height: calc(100vh - 16px);
+  height: calc(100dvh - 16px);
   max-height: calc(100vh - 16px);
   max-height: calc(100dvh - 16px);
 
@@ -108,7 +110,7 @@ body {
 
 .tab-btn {
   flex: 1;
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(12px, 2 * var(--s), 14px);
   font-weight: 500;
   padding: clamp(6px, 1.5 * var(--s), 10px) 0;
@@ -179,8 +181,8 @@ body {
 
 /* 运行中时钟放大 */
 .timer-section.running .timer-ring {
-  --ring-w: clamp(200px, 44vw, 330px);
-  --ring-h: clamp(180px, 40vh, 330px);
+  --ring-w: clamp(220px, 48vw, 360px);
+  --ring-h: clamp(200px, 44vh, 360px);
 }
 
 .timer-section.running .mode-badge {
@@ -188,7 +190,7 @@ body {
 }
 
 .timer-section.running .timer-time {
-  font-size: clamp(56px, 13.3 * var(--s), 84px);
+  font-size: clamp(64px, 15.3 * var(--s), 97px);
 }
 
 .timer-section.running .btn-primary,
@@ -205,7 +207,7 @@ body {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.02em;
   color: #4a3f2e;
-  line-height: 1;
+  line-height: 1.2;
   user-select: none;
 }
 
@@ -221,7 +223,7 @@ body {
 }
 
 .task-type-label {
-  font-size: clamp(10px, 1.6 * var(--s), 13px);
+  font-size: clamp(12px, 1.92 * var(--s), 16px);
   font-weight: 500;
   color: var(--text-secondary);
   letter-spacing: 0.04em;
@@ -243,9 +245,10 @@ body {
 
 /* 备注输入 */
 .task-note-input {
-  font-family: var(--font);
-  font-size: clamp(11px, 1.6 * var(--s), 13px);
-  padding: 6px 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: clamp(13px, 1.92 * var(--s), 16px);
+  line-height: 1.4;
+  padding: 5px 12px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.5);
@@ -267,10 +270,14 @@ body {
 }
 
 .task-type-btn {
-  font-family: var(--font);
-  font-size: clamp(10px, 1.6 * var(--s), 13px);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: clamp(12px, 1.92 * var(--s), 16px);
   font-weight: 500;
-  padding: 4px 10px;
+  line-height: 1.2;
+  padding: 5px 12px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
   border-radius: 100px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   background: transparent;
@@ -304,13 +311,14 @@ body {
   height: 14px;
   border-radius: 50%;
   font-size: 9px;
-  line-height: 1;
+  line-height: 1.2;
   background: rgba(0, 0, 0, 0.35);
   color: #fff;
 }
 
 .task-type-btn:hover .type-del {
   display: inline-flex;
+  justify-content: center;
 }
 
 .task-type-btn.active .type-del {
@@ -327,9 +335,10 @@ body {
 }
 
 .task-type-input {
-  font-family: var(--font);
-  font-size: clamp(10px, 1.6 * var(--s), 13px);
-  padding: 4px 8px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: clamp(12px, 1.92 * var(--s), 16px);
+  line-height: 1.4;
+  padding: 5px 8px;
   border: 1px solid rgba(0, 0, 0, 0.12);
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.6);
@@ -359,7 +368,7 @@ body {
   font-weight: 500;
   text-align: center;
   min-height: 0;
-  line-height: 1;
+  line-height: 1.2;
   transition: opacity 0.5s ease;
   flex-shrink: 0;
 }
@@ -371,15 +380,15 @@ body {
 /* ---------- 按钮 ---------- */
 .controls {
   display: flex;
-  gap: clamp(8px, 2vw, 14px);
+  gap: clamp(14px, 3vw, 24px);
   flex-shrink: 0;
-  margin-top: clamp(12px, 3.5 * var(--s), 20px);
+  margin-top: clamp(22px, 7.5 * var(--s), 32px);
 }
 
 .btn-primary,
 .btn-secondary {
-  font-family: var(--font);
-  font-size: clamp(13px, 2 * var(--s), 15px);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: clamp(16px, 2.4 * var(--s), 18px);
   font-weight: 500;
   padding: clamp(7px, 1.5 * var(--s), 10px) clamp(20px, 4 * var(--s), 28px);
   border-radius: 100px;
@@ -439,20 +448,20 @@ body {
 }
 
 .stat-label {
-  font-size: clamp(14px, 2.4 * var(--s), 16px);
+  font-size: clamp(15px, 2.64 * var(--s), 18px);
   color: var(--text-secondary);
 }
 
 .stat-value {
-  font-size: clamp(28px, 5 * var(--s), 38px);
+  font-size: clamp(31px, 5.5 * var(--s), 42px);
   font-weight: 500;
   color: var(--accent);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .stat-unit {
-  font-size: clamp(14px, 2.4 * var(--s), 16px);
+  font-size: clamp(15px, 2.64 * var(--s), 18px);
   color: var(--text-secondary);
 }
 
@@ -543,7 +552,7 @@ body {
   padding: 2px 10px;
   border-radius: 6px;
   transition: all 0.2s ease;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .cal-nav:hover {
@@ -637,6 +646,7 @@ body {
 
 /* ---------- 顶部通知卡片 ---------- */
 #toast {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   position: fixed;
   top: 0;
   left: 50%;
@@ -675,7 +685,7 @@ body {
   background: rgba(0, 0, 0, 0.06);
   color: var(--text-secondary);
   font-size: clamp(13px, 2.5vw, 16px);
-  line-height: 1;
+  line-height: 1.2;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -692,7 +702,7 @@ body {
 .toast-icon {
   font-size: clamp(20px, 4vw, 28px);
   flex-shrink: 0;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .toast-body {
@@ -819,6 +829,7 @@ body {
   display: flex;
   align-items: center;
   gap: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(11px, 1.6vw, 13px);
   flex-wrap: wrap;
 }
@@ -826,6 +837,7 @@ body {
 .period-item .item-time {
   color: var(--text-secondary);
   flex-shrink: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(11px, 1.6vw, 13px);
 }
 
@@ -873,7 +885,7 @@ body {
   background: transparent;
   cursor: pointer;
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -905,7 +917,7 @@ body {
 }
 
 .detail-edit-form .edit-type {
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(9px, 1.4vw, 11px);
   font-weight: 500;
   padding: 3px 5px;
@@ -923,7 +935,7 @@ body {
 }
 
 .detail-edit-form input[type="time"] {
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(10px, 1.5vw, 12px);
   padding: 3px 5px;
   border: 1px solid rgba(0, 0, 0, 0.12);
@@ -945,7 +957,7 @@ body {
 }
 
 .detail-edit-form .edit-note {
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(10px, 1.4vw, 12px);
   padding: 3px 8px;
   border: 1px solid rgba(0, 0, 0, 0.12);
@@ -968,7 +980,7 @@ body {
 
 .detail-save-btn,
 .detail-cancel-btn {
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(9px, 1.4vw, 11px);
   font-weight: 500;
   padding: 3px 8px;
@@ -1005,7 +1017,7 @@ body {
   display: block;
   width: 100%;
   padding: clamp(6px, 1.2vw, 8px) 0;
-  font-family: var(--font);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(11px, 1.6vw, 13px);
   font-weight: 500;
   color: var(--accent);
@@ -1060,7 +1072,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .auth-btn:hover {
@@ -1070,9 +1082,9 @@ body {
 }
 
 .auth-btn.logged-in {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--text-secondary);
+  border-color: rgba(0, 0, 0, 0.06);
   font-size: clamp(11px, 1.8 * var(--s), 13px);
   font-weight: 600;
 }
@@ -1134,7 +1146,7 @@ body {
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  line-height: 1;
+  line-height: 1.2;
 }
 
 .auth-close:hover {
@@ -1147,7 +1159,7 @@ body {
   display: flex;
   gap: 0;
   border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-  margin-bottom: 2px;
+  margin-bottom: 20px;
 }
 
 .auth-tab {
@@ -1157,11 +1169,22 @@ body {
   padding: 8px 0;
   border: none;
   background: transparent;
-  color: var(--accent);
-  cursor: default;
-  border-bottom: 2px solid var(--accent);
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
   letter-spacing: 0.03em;
   text-align: center;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.auth-tab.active {
+  color: var(--accent);
+  cursor: default;
+  border-bottom-color: var(--accent);
+}
+
+.auth-tab:not(.active):hover {
+  color: var(--text-primary);
 }
 
 /* 副标题 */
@@ -1240,6 +1263,10 @@ body {
   box-shadow: none;
 }
 
+#auth-force-sync {
+  margin-top: 5px;
+}
+
 .auth-submit.secondary:hover {
   background: rgba(0, 0, 0, 0.1);
   color: var(--text-primary);
@@ -1268,11 +1295,45 @@ body {
 }
 
 .auth-user-email {
-  font-size: clamp(12px, 2 * var(--s), 14px);
-  color: var(--text-primary);
-  font-weight: 500;
+  font-size: clamp(11px, 1.8 * var(--s), 13px);
+  color: var(--text-secondary);
+  font-weight: 400;
   word-break: break-all;
   text-align: center;
+}
+
+/* 昵称行 */
+.auth-name-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: -6px;
+}
+
+.auth-display-name {
+  font-size: clamp(14px, 2.4 * var(--s), 17px);
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+  user-select: none;
+}
+
+.auth-display-name:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.auth-display-name:active {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.auth-name-edit-input {
+  width: 70%;
+  text-align: center;
+  font-weight: 600;
 }
 
 /* 同步状态 */
@@ -1281,6 +1342,7 @@ body {
   color: var(--success);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
 }
 
@@ -1361,7 +1423,7 @@ body {
     flex: 0 0 auto;
     width: auto;
     border: none;
-    padding: 4px 12px;
+    padding: 5px 12px;
   }
 
   .calendar-section {
@@ -1376,7 +1438,7 @@ body {
   }
 
   .controls {
-    gap: 6px;
+    gap: 10px;
   }
 
   .btn-primary,

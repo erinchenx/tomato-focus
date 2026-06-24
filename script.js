@@ -80,6 +80,11 @@ const authError = document.getElementById("auth-error");
 const authSubmit = document.getElementById("auth-submit");
 const authUserEmail = document.getElementById("auth-user-email");
 const authAvatar = document.getElementById("auth-avatar");
+const authDisplayName = document.getElementById("auth-display-name");
+const authDisplayNameText = document.getElementById("auth-display-name-text");
+const authNameEditInput = document.getElementById("auth-name-edit-input");
+const authTabLogin = document.getElementById("auth-tab-login");
+const authTabRegister = document.getElementById("auth-tab-register");
 const authSyncStatus = document.getElementById("auth-sync-status");
 
 // ── 状态 ──────────────────────────────
@@ -1453,20 +1458,39 @@ function saveHiddenTypesLocal() {
 function updateAuthUI() {
   if (currentUser) {
     const email = currentUser.email || "";
-    const initial = email.charAt(0).toUpperCase() || "👤";
+    const displayName = currentUser.user_metadata?.display_name || "";
+    let initial = "✨";
+    if (displayName) {
+      initial = displayName.charAt(0).toUpperCase() || "✨";
+    } else if (email) {
+      const firstLetter = email.match(/[a-zA-Z]/);
+      initial = firstLetter ? firstLetter[0].toUpperCase() : "✨";
+    }
     authBtn.textContent = initial;
+    authBtn.title = displayName ? `${displayName} (${email})` : (email || "已登录");
     authBtn.classList.add("logged-in");
-    authUserEmail.textContent = email;
     authAvatar.textContent = initial;
+    // 显示名
+    if (displayName) {
+      authDisplayNameText.textContent = displayName;
+      authDisplayNameText.style.display = "";
+      authUserEmail.textContent = email;
+    } else {
+      authDisplayNameText.textContent = "✨";
+      authDisplayNameText.style.display = "";
+      authUserEmail.textContent = email;
+    }
     authFormSection.style.display = "none";
     authLoggedIn.style.display = "";
   } else {
     authBtn.textContent = "👤";
+    authBtn.title = "登录同步数据";
     authBtn.classList.remove("logged-in");
     authFormSection.style.display = "";
     authLoggedIn.style.display = "none";
     authEmail.value = "";
     authPassword.value = "";
+    if (authDisplayName) authDisplayName.value = "";
     authError.textContent = "";
     authSubmit.textContent = "登录";
     updateSyncStatus("ok", "已同步 ✓");
@@ -1479,6 +1503,28 @@ function updateSyncStatus(state, text) {
   authSyncStatus.className = "auth-sync-status " + state;
 }
 
+// ── Tab 切换 ──────────────────────────────
+let authMode = "login";
+
+function setAuthTab(mode) {
+  authMode = mode;
+  authError.textContent = "";
+  if (mode === "login") {
+    authTabLogin.classList.add("active");
+    authTabRegister.classList.remove("active");
+    authSubmit.textContent = "登录";
+    if (authDisplayName) authDisplayName.style.display = "none";
+  } else {
+    authTabRegister.classList.add("active");
+    authTabLogin.classList.remove("active");
+    authSubmit.textContent = "注册";
+    if (authDisplayName) authDisplayName.style.display = "";
+  }
+}
+
+authTabLogin.addEventListener("click", () => setAuthTab("login"));
+authTabRegister.addEventListener("click", () => setAuthTab("register"));
+
 function openAuthModal() {
   authOverlay.classList.add("show");
   if (currentUser) {
@@ -1490,8 +1536,9 @@ function openAuthModal() {
     // 重置表单
     authEmail.value = "";
     authPassword.value = "";
+    if (authDisplayName) authDisplayName.value = "";
     authError.textContent = "";
-    authSubmit.textContent = "登录";
+    setAuthTab("login");
   }
 }
 
@@ -1528,29 +1575,29 @@ async function handleAuthSubmit(e) {
 
   authError.textContent = "";
   authSubmit.disabled = true;
-  authSubmit.textContent = "登录中…";
+  authSubmit.textContent = authMode === "login" ? "登录中…" : "注册中…";
 
   try {
-    // 先尝试登录
-    const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
-    if (!signInErr) {
-      closeAuthModal();
-      return;
-    }
-    // 用户不存在 → 自动注册（Confirm email 已关，注册即登录）
-    if (signInErr.message && signInErr.message.includes("Invalid login credentials")) {
-      authSubmit.textContent = "注册中…";
-      const { error: signUpErr } = await supabase.auth.signUp({ email, password });
+    if (authMode === "register") {
+      // 直接注册
+      const displayName = (authDisplayName && authDisplayName.value.trim()) || "";
+      const signUpPayload = { email, password };
+      if (displayName) {
+        signUpPayload.options = { data: { display_name: displayName } };
+      }
+      const { error: signUpErr } = await supabase.auth.signUp(signUpPayload);
       if (signUpErr) throw signUpErr;
-      // signUp 成功后 onAuthStateChange 会自动拉取云数据
       closeAuthModal();
     } else {
-      throw signInErr;
+      // 登录
+      const { error: signInErr } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInErr) throw signInErr;
+      closeAuthModal();
     }
   } catch (err) {
     authError.textContent = err.message || "操作失败，请重试";
     authError.style.color = "#d9534f";
-    authSubmit.textContent = "登录";
+    authSubmit.textContent = authMode === "login" ? "登录" : "注册";
   }
 
   authSubmit.disabled = false;
@@ -1584,6 +1631,77 @@ document.getElementById("auth-force-sync").addEventListener("click", async () =>
   updateTodayCount();
   updateCalendar();
   renderTaskTypeRow();
+});
+
+// ── 修改昵称 ──────────────────────────────
+
+let _editNameSave = true;
+
+authDisplayNameText.addEventListener("click", () => {
+  // 点击昵称文字 → 进入编辑
+  authDisplayNameText.style.display = "none";
+  // 默认值：有昵称用昵称，否则用邮箱首字母
+  const displayName = currentUser?.user_metadata?.display_name || "";
+  const email = currentUser?.email || "";
+  authNameEditInput.value = displayName || (email.match(/[a-zA-Z]/) || [""])[0].toUpperCase() || "";
+  authNameEditInput.style.display = "";
+  authNameEditInput.focus();
+  authNameEditInput.select();
+  _editNameSave = true;
+});
+
+function finishEditDisplayName(save) {
+  _editNameSave = save;
+  if (!save) { authNameEditInput.blur(); return; }
+  const newName = authNameEditInput.value.trim();
+  authDisplayNameText.textContent = newName || authUserEmail.textContent || currentUser?.email || "";
+  if (newName && supabase) {
+    supabase.auth.updateUser({ data: { display_name: newName } }).then(({ error }) => {
+      if (error) { authSyncStatus.textContent = "昵称更新失败"; authSyncStatus.className = "auth-sync-status error"; }
+      else {
+        // 更新本地缓存
+        if (currentUser && currentUser.user_metadata) {
+          currentUser.user_metadata.display_name = newName;
+        }
+        // 刷新 header 按钮和头像
+        const initial = newName.charAt(0).toUpperCase();
+        authBtn.textContent = initial;
+        authBtn.title = `${newName} (${currentUser?.email || ""})`;
+        authAvatar.textContent = initial;
+        authUserEmail.textContent = currentUser?.email || "";
+      }
+    });
+  } else if (!newName) {
+    // 清空昵称：回退到 ✨
+    const email = currentUser?.email || "";
+    authUserEmail.textContent = email;
+    authDisplayNameText.textContent = "✨";
+    const firstLetter = email.match(/[a-zA-Z]/);
+    const initial = firstLetter ? firstLetter[0].toUpperCase() : "✨";
+    authBtn.textContent = initial;
+    authBtn.title = email || "已登录";
+    authAvatar.textContent = initial;
+    if (supabase) {
+      supabase.auth.updateUser({ data: { display_name: null } });
+      if (currentUser && currentUser.user_metadata) {
+        delete currentUser.user_metadata.display_name;
+      }
+    }
+  }
+  // 恢复显示
+  authNameEditInput.style.display = "none";
+  authDisplayNameText.style.display = "";
+}
+
+authNameEditInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") { e.preventDefault(); finishEditDisplayName(true); }
+  else if (e.key === "Escape") { e.preventDefault(); finishEditDisplayName(false); }
+});
+
+authNameEditInput.addEventListener("blur", () => {
+  setTimeout(() => {
+    if (_editNameSave) finishEditDisplayName(true);
+  }, 100);
 });
 
 // ── 离线检测 ────────────────────────────
