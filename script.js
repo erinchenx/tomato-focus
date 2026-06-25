@@ -86,6 +86,11 @@ const authNameEditInput = document.getElementById("auth-name-edit-input");
 const authTabLogin = document.getElementById("auth-tab-login");
 const authTabRegister = document.getElementById("auth-tab-register");
 const authSyncStatus = document.getElementById("auth-sync-status");
+const typeMgrOverlay = document.getElementById("type-mgr-overlay");
+const typeMgrList = document.getElementById("type-mgr-list");
+const typeMgrAddInput = document.getElementById("type-mgr-add-input");
+const typeMgrAddBtn = document.getElementById("type-mgr-add-btn");
+const typeMgrDoneBtn = document.getElementById("type-mgr-done-btn");
 
 // ── 状态 ──────────────────────────────
 let timer = null;
@@ -99,6 +104,7 @@ let sessionStartTime = null; // 当前专注开始的绝对时间戳
 let currentTaskType = "无类型";   // 当前选中的任务类型
 let currentNote = "";            // 当前备注
 let calYear, calMonth;
+let typeMgrOriginalType = null;  // 类型管理弹窗关闭时恢复的下拉框选中值
 
 // ── 计时器状态持久化（刷新不丢） ──────
 // 同时写入所有可用存储，刷新时从任意一个恢复
@@ -264,6 +270,9 @@ function getDateKey(date) {
 const DEFAULT_TYPES = ["工作", "探索", "读书"];
 let customTypes = [];
 let hiddenTypes = [];
+let deletedDefaults = [];  // 永久删除的默认类型
+let typeOrder = [];        // 类型显示顺序
+let defaultType = null;    // 默认专注类型
 
 function loadTypeData() {
   try {
@@ -274,6 +283,26 @@ function loadTypeData() {
     const raw = localStorage.getItem("hiddenTypes");
     if (raw) hiddenTypes = JSON.parse(raw);
   } catch (_) { hiddenTypes = []; }
+  try {
+    defaultType = localStorage.getItem("defaultType") || null;
+  } catch (_) { defaultType = null; }
+  try {
+    const raw = localStorage.getItem("deletedDefaults");
+    if (raw) deletedDefaults = JSON.parse(raw);
+  } catch (_) { deletedDefaults = []; }
+  try {
+    const raw = localStorage.getItem("typeOrder");
+    if (raw) typeOrder = JSON.parse(raw);
+  } catch (_) { typeOrder = []; }
+}
+
+function saveDefaultType() {
+  if (defaultType) {
+    localStorage.setItem("defaultType", defaultType);
+  } else {
+    localStorage.removeItem("defaultType");
+  }
+  if (currentUser) { syncDirty = true; schedulePush(); }
 }
 
 function saveCustomTypes() {
@@ -286,23 +315,56 @@ function saveHiddenTypes() {
   if (currentUser) { syncDirty = true; schedulePush(); }
 }
 
+function saveDeletedDefaults() {
+  localStorage.setItem("deletedDefaults", JSON.stringify(deletedDefaults));
+  if (currentUser) { syncDirty = true; schedulePush(); }
+}
+
+function saveTypeOrder() {
+  localStorage.setItem("typeOrder", JSON.stringify(typeOrder));
+  if (currentUser) { syncDirty = true; schedulePush(); }
+}
+
 function addCustomType(type) {
   if (!type) return;
-  // 如果是被隐藏的默认类型，恢复它
+  // 如果是被永久删除的默认类型，恢复它
   if (DEFAULT_TYPES.includes(type)) {
+    const didx = deletedDefaults.indexOf(type);
+    if (didx >= 0) { deletedDefaults.splice(didx, 1); saveDeletedDefaults(); }
     const hidx = hiddenTypes.indexOf(type);
-    if (hidx >= 0) { hiddenTypes.splice(hidx, 1); saveHiddenTypes(); renderTaskTypeRow(); }
+    if (hidx >= 0) { hiddenTypes.splice(hidx, 1); saveHiddenTypes(); }
+    renderTaskTypeRow();
     return;
   }
   if (customTypes.includes(type)) return;
   customTypes.push(type);
   saveCustomTypes();
+  // 新增类型添加到排序末尾
+  if (!typeOrder.includes(type)) {
+    typeOrder.push(type);
+    saveTypeOrder();
+  }
   renderTaskTypeRow();
 }
 
-// 获取当前可见的类型列表
+// 获取所有可用类型（含隐藏，不含永久删除），按 typeOrder 排序
+function getAllTypesOrdered() {
+  const all = [...DEFAULT_TYPES.filter(t => !deletedDefaults.includes(t)), ...customTypes];
+  if (typeOrder.length > 0) {
+    all.sort((a, b) => {
+      const ai = typeOrder.indexOf(a), bi = typeOrder.indexOf(b);
+      if (ai === -1 && bi === -1) return 0;
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }
+  return all;
+}
+
+// 获取当前可见的类型列表（隐藏的默认类型不显示）
 function getVisibleTypes() {
-  return [...DEFAULT_TYPES.filter(t => !hiddenTypes.includes(t)), ...customTypes];
+  return getAllTypesOrdered().filter(t => !hiddenTypes.includes(t));
 }
 
 // 删除类型（默认类型加入隐藏列表，自定义类型直接移除）
@@ -317,7 +379,43 @@ function removeCustomType(type) {
     if (idx >= 0) { customTypes.splice(idx, 1); saveCustomTypes(); }
   }
   if (currentTaskType === type) currentTaskType = "无类型";
+  if (defaultType === type) { defaultType = null; saveDefaultType(); }
   renderTaskTypeRow();
+}
+
+// 永久删除类型（专注类型管理弹窗用）
+function permanentDeleteType(type) {
+  if (DEFAULT_TYPES.includes(type)) {
+    if (!deletedDefaults.includes(type)) {
+      deletedDefaults.push(type);
+      saveDeletedDefaults();
+    }
+    // 也从隐藏列表中移除
+    const hidx = hiddenTypes.indexOf(type);
+    if (hidx >= 0) { hiddenTypes.splice(hidx, 1); saveHiddenTypes(); }
+  } else {
+    const idx = customTypes.indexOf(type);
+    if (idx >= 0) { customTypes.splice(idx, 1); saveCustomTypes(); }
+  }
+  // 从排序中移除
+  const oidx = typeOrder.indexOf(type);
+  if (oidx >= 0) { typeOrder.splice(oidx, 1); saveTypeOrder(); }
+  if (currentTaskType === type) currentTaskType = "无类型";
+  if (defaultType === type) { defaultType = null; saveDefaultType(); }
+  renderTaskTypeRow();
+}
+
+// 移动类型排序位置
+function moveTypeOrder(type, direction) {
+  const all = getAllTypesOrdered();
+  const idx = all.indexOf(type);
+  if (idx === -1) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= all.length) return;
+  // 更新 typeOrder
+  typeOrder = all;
+  [typeOrder[idx], typeOrder[newIdx]] = [typeOrder[newIdx], typeOrder[idx]];
+  saveTypeOrder();
 }
 
 // 动态渲染任务类型按钮
@@ -329,8 +427,7 @@ function renderTaskTypeRow() {
     allTypes.map(t => {
       return `<button class="task-type-btn${t === activeType ? " active" : ""}" data-type="${t}">${t}<span class="type-del" data-action="del-type" data-type="${t}">✕</span></button>`;
     }).join("") +
-    `<button class="task-type-btn${currentTaskType && !allTypes.includes(currentTaskType) && currentTaskType !== "无类型" ? " active" : ""}" data-type="__custom__">+ 自定义</button>
-    <input type="text" class="task-type-input" id="task-type-input" placeholder="输入类型…" maxlength="8" style="display:none;">`;
+    `<button class="task-type-btn task-type-manage-btn" data-type="__custom__">+ 自定义</button>`;
 }
 
 // 检查番茄钟时间是否与已有记录重叠（不允许时间重复）
@@ -661,7 +758,7 @@ function getPeriod(ts) {
 
 // 将 sessions 按上午/下午/晚间分组，组内按开始时间排序
 function groupSessionsByPeriod(sessions) {
-  const groups = { "上午": [], "下午": [], "晚间": [], "凌晨": [] };
+  const groups = { "凌晨": [], "上午": [], "下午": [], "晚间": [] };
   sessions.forEach((s, i) => {
     const period = getPeriod(s ? s.start : null);
     groups[period].push({ ...s, _globalIndex: i });
@@ -728,7 +825,7 @@ function showDayDetail(dateKey, cell) {
   const groups = groupSessionsByPeriod(sessions);
 
   // 渲染每个时段
-  ["上午", "下午", "晚间", "凌晨"].forEach(period => {
+  ["凌晨", "上午", "下午", "晚间"].forEach(period => {
     const list = getPeriodListEl(period);
     const items = groups[period];
     const countEl = list.parentElement.querySelector(".period-count");
@@ -742,6 +839,12 @@ function showDayDetail(dateKey, cell) {
       list.innerHTML = items.map(s => renderPeriodItem(s, s._globalIndex)).join("");
     }
   });
+
+  // 凌晨时段：无记录时隐藏整个区块
+  const dawnBlock = periodDawn.closest(".period-block");
+  if (dawnBlock) {
+    dawnBlock.style.display = groups["凌晨"].length === 0 ? "none" : "";
+  }
 
   // 定位浮窗
   positionDayDetail(cell);
@@ -767,9 +870,17 @@ function positionDayDetail(cell) {
   dayDetail.style.bottom = "auto";
   dayDetail.style.left = "auto";
   dayDetail.style.right = "auto";
+  dayDetail.style.maxHeight = "";
 
   dayDetail.classList.add("show");
-  const dh = dayDetail.offsetHeight;
+  let dh = dayDetail.offsetHeight;
+
+  // 限制最大高度，确保面板不超出屏幕
+  const maxAvail = vh - 32; // 上下各留 16px
+  if (dh > maxAvail) {
+    dayDetail.style.maxHeight = `${maxAvail}px`;
+    dh = maxAvail;
+  }
 
   // 纵向：优先显示在格子上方，空间不够则下方
   let top = cellRect.top - 8;
@@ -818,16 +929,21 @@ function startEditSession(dateKey, index) {
 
   const startVal = (session && session.start) ? timestampToTimeString(session.start) : "";
   const endVal = (session && session.end) ? timestampToTimeString(session.end) : "";
-  const typeVal = (session && session.type) || "无类型";
+  const typeVal = (session && session.type) || (isNew && defaultType && getVisibleTypes().includes(defaultType) ? defaultType : "无类型");
   const noteVal = (session && session.note) || "";
   const visibleTypes = getVisibleTypes();
-  const typeOptions = visibleTypes.map(t =>
-    `<option value="${t}" ${t === typeVal ? "selected" : ""}>${t}</option>`
-  ).join("");
+  const typeDropdownItems = visibleTypes.map(t =>
+    `<button class="edit-type-opt" type="button" data-value="${t}">${t}</button>`
+  ).join("") +
+    `<div class="edit-type-sep"></div>` +
+    `<button class="edit-type-opt edit-type-opt-settings" type="button" data-value="__type_settings__">选项设置</button>`;
 
   const formHtml = `
     <div class="detail-edit-form" data-edit-index="${index}">
-      <select class="edit-type">${typeOptions}</select>
+      <div class="edit-type-custom">
+        <button class="edit-type-btn" type="button">${typeVal}<span class="edit-type-arrow">▾</span></button>
+        <div class="edit-type-dropdown">${typeDropdownItems}</div>
+      </div>
       <input type="time" class="edit-start" value="${startVal}">
       <span class="time-sep">–</span>
       <input type="time" class="edit-end" value="${endVal}">
@@ -843,14 +959,9 @@ function startEditSession(dateKey, index) {
 
   let formEl;
   if (isNew) {
-    // 新增：根据当前时间插入到对应时段末尾
-    const targetPeriod = getPeriod(Date.now());
-    const targetList = getPeriodListEl(targetPeriod);
-    if (targetList.querySelector(".period-empty")) {
-      targetList.innerHTML = ""; // 清除占位
-    }
-    targetList.insertAdjacentHTML("beforeend", formHtml);
-    formEl = targetList.querySelector(".detail-edit-form");
+    // 新增：插入到所有时段末尾
+    detailPeriods.insertAdjacentHTML("beforeend", formHtml);
+    formEl = detailPeriods.querySelector(".detail-edit-form:last-of-type");
   } else {
     // 编辑：找到对应行并替换
     const item = detailPeriods.querySelector(`.period-item[data-index="${index}"]`);
@@ -865,18 +976,152 @@ function startEditSession(dateKey, index) {
     const startInput = formEl.querySelector(".edit-start");
     const endInput = formEl.querySelector(".edit-end");
 
-    startInput.addEventListener("change", () => {
-      if (startInput.value && !endInput.value) {
-        endInput.value = addMinutesToTime(startInput.value, 25);
-      }
-    });
+    // 自动填充：debounce 确保用户输入完毕后才计算
+    let startTimer, endTimer;
 
-    endInput.addEventListener("change", () => {
-      if (endInput.value && !startInput.value) {
-        startInput.value = addMinutesToTime(endInput.value, -25);
+    const scheduleEndFill = () => {
+      clearTimeout(startTimer);
+      if (startInput.value) {
+        startTimer = setTimeout(() => {
+          endInput.value = addMinutesToTime(startInput.value, 25);
+        }, 300);
       }
-    });
+    };
+
+    const scheduleStartFill = () => {
+      clearTimeout(endTimer);
+      if (endInput.value) {
+        endTimer = setTimeout(() => {
+          startInput.value = addMinutesToTime(endInput.value, -25);
+        }, 300);
+      }
+    };
+
+    startInput.addEventListener("input", scheduleEndFill);
+    startInput.addEventListener("change", scheduleEndFill);
+
+    endInput.addEventListener("input", scheduleStartFill);
+    endInput.addEventListener("change", scheduleStartFill);
+
+    // 自定义类型下拉框交互
+    const typeCustom = formEl.querySelector(".edit-type-custom");
+    if (typeCustom) {
+      const typeBtn = typeCustom.querySelector(".edit-type-btn");
+      const typeDropdown = typeCustom.querySelector(".edit-type-dropdown");
+      typeCustom.dataset.originalType = typeVal;
+
+      // 点击按钮切换下拉
+      typeBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isOpen = typeDropdown.classList.contains("show");
+        // 关闭所有其他下拉
+        document.querySelectorAll(".edit-type-dropdown.show").forEach(d => d.classList.remove("show"));
+        if (!isOpen) typeDropdown.classList.add("show");
+      });
+
+      // 点击选项
+      typeDropdown.addEventListener("click", (e) => {
+        const opt = e.target.closest(".edit-type-opt");
+        if (!opt) return;
+        const val = opt.dataset.value;
+        if (val === "__type_settings__") {
+          typeMgrOriginalType = typeCustom.dataset.originalType;
+          typeDropdown.classList.remove("show");
+          openTypeManagerModal();
+        } else {
+          typeBtn.childNodes[0].textContent = val;
+          typeCustom.dataset.originalType = val;
+          typeDropdown.classList.remove("show");
+        }
+      });
+    }
+
+    // 表单插入后重新定位面板，防止底部被折叠
+    if (dayDetail._cell) {
+      positionDayDetail(dayDetail._cell);
+    }
   }
+}
+
+// ── 类型管理弹窗 ──────────────────────
+
+function openTypeManagerModal() {
+  renderTypeManagerList();
+  typeMgrAddInput.value = "";
+  typeMgrOverlay.classList.add("show");
+}
+
+function closeTypeManagerModal() {
+  typeMgrOverlay.classList.remove("show");
+  refreshEditTypeSelect();
+}
+
+function renderTypeManagerList() {
+  const allTypes = getAllTypesOrdered();
+  let html = "";
+
+  allTypes.forEach((type) => {
+    const isDefault = type === defaultType;
+    const isHidden = hiddenTypes.includes(type);
+
+    let row = `<div class="type-mgr-item" draggable="true" data-type="${type}">`;
+    // 拖拽手柄
+    row += `<span class="type-mgr-drag-handle" title="拖拽排序">⋮⋮</span>`;
+
+    if (isHidden) {
+      row += `<span class="type-mgr-item-name dimmed">${type}</span>
+        <span class="type-mgr-item-label">（已隐藏）</span>
+        <button class="type-mgr-restore-btn" data-action="restore-type" data-type="${type}">恢复</button>`;
+    } else {
+      row += `<span class="type-mgr-item-name">${type}</span>`;
+      if (isDefault) {
+        row += `<span class="type-mgr-item-label type-mgr-default-label">默认</span>`;
+      } else {
+        row += `<button class="type-mgr-set-default-btn" data-action="set-default-type" data-type="${type}">设为默认</button>`;
+      }
+      row += `<button class="type-mgr-del-btn" data-action="delete-type" data-type="${type}" title="永久删除">✕</button>`;
+    }
+    row += `</div>`;
+    html += row;
+  });
+
+  typeMgrList.innerHTML = html || '<div style="text-align:center;color:var(--text-secondary);opacity:0.5;padding:12px;">暂无类型</div>';
+}
+
+function refreshEditTypeSelect() {
+  const form = detailPeriods.querySelector(".detail-edit-form");
+  if (!form) return;
+  const typeCustom = form.querySelector(".edit-type-custom");
+  if (!typeCustom) return;
+
+  let originalType = typeMgrOriginalType || typeCustom.dataset.originalType || "无类型";
+  const visibleTypes = getVisibleTypes();
+
+  // 如果设置了默认类型且可见，优先使用默认类型
+  if (defaultType && visibleTypes.includes(defaultType)) {
+    originalType = defaultType;
+  }
+
+  // 如果原类型被删了，兜底到第一个可见类型
+  if (!visibleTypes.includes(originalType) && originalType !== "无类型") {
+    originalType = visibleTypes.length > 0 ? visibleTypes[0] : "无类型";
+  }
+
+  // 更新按钮文字
+  const typeBtn = typeCustom.querySelector(".edit-type-btn");
+  if (typeBtn) typeBtn.childNodes[0].textContent = originalType;
+
+  // 重建下拉选项
+  const typeDropdown = typeCustom.querySelector(".edit-type-dropdown");
+  if (typeDropdown) {
+    typeDropdown.innerHTML = visibleTypes.map(t =>
+      `<button class="edit-type-opt" type="button" data-value="${t}">${t}</button>`
+    ).join("") +
+      `<div class="edit-type-sep"></div>` +
+      `<button class="edit-type-opt edit-type-opt-settings" type="button" data-value="__type_settings__">选项设置</button>`;
+  }
+
+  typeCustom.dataset.originalType = originalType;
 }
 
 // 保存编辑
@@ -885,12 +1130,33 @@ function saveEditSession(dateKey, index, startStr, endStr, type, note) {
     alert("请填写开始和结束时间");
     return;
   }
-  const start = timeToTimestamp(dateKey, startStr);
+
+  const [startH, startM] = startStr.split(":").map(Number);
+  const [endH, endM] = endStr.split(":").map(Number);
+
+  // 结束时间早于开始时间 → 仅当 start ≥ 23:35 时允许跨天
+  const endBeforeStart = (endH < startH) || (endH === startH && endM <= startM);
+  if (endBeforeStart) {
+    if (startH < 23 || (startH === 23 && startM < 35)) {
+      alert("结束时间不能早于开始时间（仅23:35之后允许跨天记录）");
+      return;
+    }
+  }
+
+  let start = timeToTimestamp(dateKey, startStr);
   let end = timeToTimestamp(dateKey, endStr);
+
+  // 开始时间在0:00之后（含0:00）计入下一天
+  if (startH === 0) {
+    start += 24 * 3600000;
+    end += 24 * 3600000;
+  }
+
   // 跨午夜：结束时间在开始时间之前或相同 → 自动加一天
   if (end <= start) {
     end += 24 * 3600000;
   }
+
   // 检查时间是否与已有记录重叠
   if (hasTimeOverlap(dateKey, start, end, index >= 0 ? index : -1)) {
     alert("该时段与已有番茄钟记录重叠，请调整时间");
@@ -941,10 +1207,17 @@ detailPeriods.addEventListener("click", (e) => {
     const form = saveBtn.closest(".detail-edit-form");
     const startInput = form.querySelector(".edit-start");
     const endInput = form.querySelector(".edit-end");
-    const typeSelect = form.querySelector(".edit-type");
+    const typeCustom = form.querySelector(".edit-type-custom");
     const noteInput = form.querySelector(".edit-note");
-    const type = typeSelect ? typeSelect.value : "无类型";
+    const rawType = typeCustom ? (typeCustom.dataset.originalType || "无类型") : "无类型";
+    const type = (rawType === "__type_settings__") ? "无类型" : rawType;
     const note = noteInput ? noteInput.value : "";
+    // 保存时兜底自动填充（防止 debounce 未触发）
+    if (startInput.value && !endInput.value) {
+      endInput.value = addMinutesToTime(startInput.value, 25);
+    } else if (endInput.value && !startInput.value) {
+      startInput.value = addMinutesToTime(endInput.value, -25);
+    }
     saveEditSession(dateKey, index, startInput.value, endInput.value, type, note);
     return;
   }
@@ -1165,14 +1438,7 @@ taskTypeRow.addEventListener("click", (e) => {
   const input = taskTypeRow.querySelector("#task-type-input");
 
   if (type === "__custom__") {
-    // 切换到自定义输入
-    taskTypeRow.querySelectorAll(".task-type-btn").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    if (input) {
-      input.style.display = "";
-      input.focus();
-      currentTaskType = input.value.trim() || "";
-    }
+    openTypeManagerModal();
   } else {
     if (input) {
       input.style.display = "none";
@@ -1225,10 +1491,14 @@ document.getElementById("cal-next").addEventListener("click", () => {
   updateCalendar(calYear, calMonth);
 });
 
-// 点击日历区域外关闭详情
+// 点击日历区域外关闭详情 + 关闭自定义下拉
 document.addEventListener("click", (e) => {
   if (!dayDetail.contains(e.target) && !e.target.closest(".day-cell")) {
     hideDayDetail();
+  }
+  // 关闭所有类型下拉
+  if (!e.target.closest(".edit-type-custom")) {
+    document.querySelectorAll(".edit-type-dropdown.show").forEach(d => d.classList.remove("show"));
   }
 });
 
@@ -1632,6 +1902,112 @@ document.getElementById("auth-force-sync").addEventListener("click", async () =>
   renderTaskTypeRow();
 });
 
+// ── 类型管理弹窗事件 ──────────────────
+
+typeMgrOverlay.addEventListener("click", (e) => {
+  if (e.target === typeMgrOverlay) closeTypeManagerModal();
+});
+
+typeMgrDoneBtn.addEventListener("click", closeTypeManagerModal);
+
+typeMgrList.addEventListener("click", (e) => {
+  const delBtn = e.target.closest("[data-action='delete-type']");
+  if (delBtn) {
+    const type = delBtn.dataset.type;
+    if (confirm(`永久删除类型「${type}」？`)) {
+      permanentDeleteType(type);
+      renderTypeManagerList();
+    }
+    return;
+  }
+
+  const restoreBtn = e.target.closest("[data-action='restore-type']");
+  if (restoreBtn) {
+    const type = restoreBtn.dataset.type;
+    addCustomType(type);
+    renderTypeManagerList();
+    return;
+  }
+
+  const setDefaultBtn = e.target.closest("[data-action='set-default-type']");
+  if (setDefaultBtn) {
+    const type = setDefaultBtn.dataset.type;
+    defaultType = type;
+    saveDefaultType();
+    if (!currentTaskType || currentTaskType === "无类型") {
+      currentTaskType = type;
+    }
+    renderTypeManagerList();
+    renderTaskTypeRow();
+    return;
+  }
+});
+
+// ── 拖拽排序 ──
+let dragSrcType = null;
+
+typeMgrList.addEventListener("dragstart", (e) => {
+  const item = e.target.closest(".type-mgr-item");
+  if (!item) return;
+  dragSrcType = item.dataset.type;
+  item.classList.add("dragging");
+  e.dataTransfer.effectAllowed = "move";
+  e.dataTransfer.setData("text/plain", dragSrcType);
+});
+
+typeMgrList.addEventListener("dragend", (e) => {
+  const item = e.target.closest(".type-mgr-item");
+  if (item) item.classList.remove("dragging");
+  typeMgrList.querySelectorAll(".type-mgr-item").forEach(el => el.classList.remove("drag-over"));
+  dragSrcType = null;
+});
+
+typeMgrList.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  const item = e.target.closest(".type-mgr-item");
+  if (!item || item.dataset.type === dragSrcType) return;
+  typeMgrList.querySelectorAll(".type-mgr-item").forEach(el => el.classList.remove("drag-over"));
+  item.classList.add("drag-over");
+});
+
+typeMgrList.addEventListener("drop", (e) => {
+  e.preventDefault();
+  const item = e.target.closest(".type-mgr-item");
+  if (!item || !dragSrcType || item.dataset.type === dragSrcType) return;
+
+  const allTypes = getAllTypesOrdered();
+  const srcIdx = allTypes.indexOf(dragSrcType);
+  const targetIdx = allTypes.indexOf(item.dataset.type);
+  if (srcIdx === -1 || targetIdx === -1) return;
+
+  // 移动源到目标位置
+  allTypes.splice(srcIdx, 1);
+  allTypes.splice(targetIdx, 0, dragSrcType);
+  typeOrder = allTypes;
+  saveTypeOrder();
+  renderTypeManagerList();
+});
+
+typeMgrAddBtn.addEventListener("click", () => {
+  const name = typeMgrAddInput.value.trim();
+  if (!name) return;
+  if (name.length > 10) {
+    alert("类型名称不能超过10个字符");
+    return;
+  }
+  addCustomType(name);
+  typeMgrAddInput.value = "";
+  renderTypeManagerList();
+});
+
+typeMgrAddInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    typeMgrAddBtn.click();
+  }
+});
+
 // ── 修改昵称 ──────────────────────────────
 
 let _editNameSave = true;
@@ -1816,6 +2192,9 @@ function init() {
     loadFocusData();
     cleanFocusDataOverlaps(); // 清理本地已有的重复数据
     loadTypeData();
+    if (defaultType && currentTaskType === "无类型") {
+      currentTaskType = defaultType;
+    }
     renderTaskTypeRow();
     buildWeekdayRow();
     updateDateDisplay();
