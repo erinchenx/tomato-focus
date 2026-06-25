@@ -859,53 +859,37 @@ function showDayDetail(dateKey, cell) {
 }
 
 function positionDayDetail(cell) {
-  const cellRect = cell.getBoundingClientRect();
-  const detailWidth = dayDetail.offsetWidth || 320;
-  const halfDetail = detailWidth / 2;
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-
-  // 重置样式
+  dayDetail.style.maxHeight = "";
   dayDetail.style.top = "auto";
   dayDetail.style.bottom = "auto";
-  dayDetail.style.left = "auto";
-  dayDetail.style.right = "auto";
-  dayDetail.style.maxHeight = "";
-
+  dayDetail.style.left = "50%";
+  dayDetail.style.transform = "translateX(-50%)";
   dayDetail.classList.add("show");
-  let dh = dayDetail.offsetHeight;
 
-  // 限制最大高度，确保面板不超出屏幕
-  const maxAvail = vh - 32; // 上下各留 16px
-  if (dh > maxAvail) {
-    dayDetail.style.maxHeight = `${maxAvail}px`;
-    dh = maxAvail;
+  // 从统计区下方一点开始
+  const stats = document.getElementById("calendar-stats");
+  if (stats) {
+    const statsBottom = stats.getBoundingClientRect().bottom;
+    dayDetail.style.top = `${statsBottom + 16}px`;
   }
 
-  // 纵向：优先显示在格子上方，空间不够则下方
-  let top = cellRect.top - 8;
-  if (top - dh < 16) {
-    // 上方空间不足，改为下方
-    top = cellRect.bottom + 8;
-    // 如果下方也溢出，贴近底部
-    if (top + dh > vh - 16) {
-      top = vh - dh - 16;
-    }
-  } else {
-    top = top - dh;
+  // 宽度：内容区对齐统计区（面板宽度 = 容器内容区 + 面板自身 padding）
+  const container = document.querySelector(".container");
+  if (container) {
+    const cs = getComputedStyle(container);
+    const containerContentW = container.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const detailCs = getComputedStyle(dayDetail);
+    const detailPad = parseFloat(detailCs.paddingLeft) + parseFloat(detailCs.paddingRight);
+    dayDetail.style.width = `${containerContentW + detailPad}px`;
   }
-  // 确保不超出顶部
-  top = Math.max(8, top);
 
-  // 横向：居中于格子，但不超出屏幕边界
-  let left = cellRect.left + cellRect.width / 2;
-  const minLeft = halfDetail + 8;
-  const maxLeft = vw - halfDetail - 8;
-  left = Math.max(minLeft, Math.min(left, maxLeft));
-
-  dayDetail.style.top = `${top}px`;
-  dayDetail.style.left = `${left}px`;
-  dayDetail.style.transform = "translateX(-50%) translateY(0)";
+  // 限制高度不超出屏幕底部（留出 tab 栏空间）
+  const tabBar = document.querySelector(".tab-bar");
+  const tabTop = tabBar ? tabBar.getBoundingClientRect().top : window.innerHeight;
+  const maxH = tabTop - parseFloat(dayDetail.style.top) - 8;
+  if (maxH > 0) {
+    dayDetail.style.maxHeight = `${maxH}px`;
+  }
 }
 
 function refreshAfterEdit() {

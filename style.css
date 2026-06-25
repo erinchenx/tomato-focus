@@ -196,7 +196,7 @@ body {
 .timer-section.running .btn-primary,
 .timer-section.running .btn-secondary {
   font-size: clamp(15px, 2.4 * var(--s), 18px);
-  padding: clamp(9px, 2 * var(--s), 13px) clamp(24px, 5 * var(--s), 34px);
+  padding: clamp(11px, 2.2 * var(--s), 15px) clamp(28px, 5.5 * var(--s), 40px);
 }
 
 
@@ -395,7 +395,7 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(16px, 2.4 * var(--s), 18px);
   font-weight: 500;
-  padding: clamp(7px, 1.5 * var(--s), 10px) clamp(20px, 4 * var(--s), 28px);
+  padding: clamp(9px, 1.8 * var(--s), 12px) clamp(22px, 4.5 * var(--s), 32px);
   border-radius: 100px;
   border: none;
   cursor: pointer;
@@ -739,22 +739,33 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   position: fixed;
   z-index: 9998;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 252, 248, 0.92);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-radius: clamp(10px, 2vw, 16px);
   padding: clamp(12px, 2.5vw, 20px) clamp(14px, 3vw, 22px) clamp(10px, 2vw, 16px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  width: min(calc(100vw - 16px), 360px);
-  max-height: 88vh;
-  max-height: 88dvh;
+  width: min(calc(100vw - 32px), 460px);
+  max-height: 80vh;
+  max-height: 80dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(243, 237, 231, 0.3) transparent;
   opacity: 0;
   transform: translateY(8px);
   pointer-events: none;
   transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#day-detail::-webkit-scrollbar {
+  width: 3px;
+}
+#day-detail::-webkit-scrollbar-track {
+  background: transparent;
+}
+#day-detail::-webkit-scrollbar-thumb {
+  background: rgba(243, 237, 231, 0.4);
+  border-radius: 3px;
 }
 
 #day-detail.show {
