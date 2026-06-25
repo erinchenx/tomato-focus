@@ -924,16 +924,20 @@ function startEditSession(dateKey, index) {
 
   const formHtml = `
     <div class="detail-edit-form" data-edit-index="${index}">
-      <div class="edit-type-custom">
-        <button class="edit-type-btn" type="button">${typeVal}<span class="edit-type-arrow">▾</span></button>
-        <div class="edit-type-dropdown">${typeDropdownItems}</div>
+      <div class="detail-edit-row">
+        <div class="edit-type-custom">
+          <button class="edit-type-btn" type="button">${typeVal}<span class="edit-type-arrow">▾</span></button>
+          <div class="edit-type-dropdown">${typeDropdownItems}</div>
+        </div>
+        <input type="time" class="edit-start" value="${startVal}">
+        <span class="time-sep">–</span>
+        <input type="time" class="edit-end" value="${endVal}">
       </div>
-      <input type="time" class="edit-start" value="${startVal}">
-      <span class="time-sep">–</span>
-      <input type="time" class="edit-end" value="${endVal}">
-      <input type="text" class="edit-note" value="${noteVal.replace(/"/g, '&quot;')}" placeholder="备注…" maxlength="50">
-      <button class="detail-save-btn" data-action="save" data-index="${index}">保存</button>
-      <button class="detail-cancel-btn" data-action="cancel" data-index="${index}">取消</button>
+      <div class="detail-edit-row">
+        <input type="text" class="edit-note" value="${noteVal.replace(/"/g, '&quot;')}" placeholder="备注…" maxlength="50">
+        <button class="detail-save-btn" data-action="save" data-index="${index}">保存</button>
+        <button class="detail-cancel-btn" data-action="cancel" data-index="${index}">取消</button>
+      </div>
     </div>
   `;
 

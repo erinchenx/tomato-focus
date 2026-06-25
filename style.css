@@ -96,6 +96,7 @@ body {
   width: 100%;
   gap: clamp(6px, 2 * var(--s), 16px);
   overflow-y: visible;
+  padding-bottom: clamp(8px, 2 * var(--s), 16px);
 }
 
 /* ---------- 底部 Tab 栏 ---------- */
@@ -438,11 +439,12 @@ body {
 .stats-section {
   width: 100%;
   text-align: center;
-  padding: clamp(6px, 2 * var(--s), 12px) 0;
+  padding: clamp(4px, 0.8 * var(--s), 8px) 0;
   border-top: 1px solid rgba(0, 0, 0, 0.06);
   border-bottom: 1px solid rgba(0, 0, 0, 0.06);
   flex-shrink: 0;
   margin-top: auto;
+  margin-bottom: clamp(4px, 1 * var(--s), 10px);
 }
 
 .stat-item {
@@ -925,12 +927,17 @@ body {
 
 .detail-edit-form {
   display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.detail-edit-row {
+  display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 14px;
   flex-wrap: wrap;
-  padding: 4px 0;
-  margin-left: -2px;
 }
 
 /* ── 自定义类型下拉 ── */
@@ -1039,14 +1046,14 @@ body {
 .detail-edit-form input[type="time"] {
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
   font-size: clamp(13px, 2vw, 16px);
-  padding: 3px 5px;
+  padding: 3px 10px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 100px;
   background: rgba(255, 255, 255, 0.65);
   color: var(--text-primary);
   outline: none;
   transition: all 0.2s ease;
-  width: clamp(70px, 14.4vw, 86px);
+  width: clamp(80px, 16vw, 96px);
   height: calc(1em + 16px);
   box-sizing: border-box;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
@@ -1076,7 +1083,7 @@ body {
   background: rgba(255, 255, 255, 0.7);
   color: var(--text-primary);
   outline: none;
-  width: clamp(80px, 18vw, 120px);
+  width: clamp(100px, 50%, 220px) !important;
   height: calc(1em + 16px);
   box-sizing: border-box;
   transition: border-color 0.2s ease;
