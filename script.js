@@ -1004,7 +1004,19 @@ function startEditSession(dateKey, index) {
         const isOpen = typeDropdown.classList.contains("show");
         // 关闭所有其他下拉
         document.querySelectorAll(".edit-type-dropdown.show").forEach(d => d.classList.remove("show"));
-        if (!isOpen) typeDropdown.classList.add("show");
+        if (!isOpen) {
+          // 判断编辑表单位置：若按钮在 #day-detail 面板内靠上，向上展开会被面板裁切，改为向下展开
+          const btnRect = typeBtn.getBoundingClientRect();
+          const panelRect = detailPeriods.closest("#day-detail").getBoundingClientRect();
+          const spaceAbove = btnRect.top - panelRect.top;
+          // 下拉面板约 220px，预留 20px 安全边距
+          if (spaceAbove < 240) {
+            typeDropdown.classList.add("drop-down");
+          } else {
+            typeDropdown.classList.remove("drop-down");
+          }
+          typeDropdown.classList.add("show");
+        }
       });
 
       // 点击选项

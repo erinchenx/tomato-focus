@@ -1004,6 +1004,14 @@ body {
   gap: 2px;
 }
 
+.edit-type-dropdown.drop-down {
+  bottom: auto;
+  top: 100%;
+  margin-bottom: 0;
+  margin-top: 4px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+}
+
 .edit-type-dropdown.show {
   display: flex;
 }
