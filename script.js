@@ -1328,8 +1328,8 @@ document.addEventListener("visibilitychange", () => {
 function playAlarmSound() {
   const msg =
     currentMode === "work"
-      ? "专注时间结束，休息一下 ☕"
-      : "休息结束，开始专注吧 💪";
+      ? "专注时间结束，休息一下吧☕"
+      : "休息时间结束，完成一个番茄钟🍅";
   showNotification(msg);
   sendSystemNotification(msg);
   startTitleFlash(msg);
@@ -1825,7 +1825,7 @@ async function handleAuthSubmit(e) {
     return;
   }
   if (password.length < 6) {
-    authError.textContent = "密码至少需要 6 位";
+    authError.textContent = `密码至少需要6位`;
     return;
   }
 
@@ -1864,7 +1864,14 @@ async function handleAuthSubmit(e) {
       closeAuthModal();
     }
   } catch (err) {
-    authError.textContent = err.message || "操作失败，请重试";
+    const errorMessages = {
+      "Invalid login credentials": "邮箱或密码错误",
+      "User already registered": "该邮箱已注册，请直接登录",
+      "Email not confirmed": "邮箱未验证，请先查收验证邮件",
+      "Email rate limit exceeded": "操作过于频繁，请稍后再试",
+      "Password should be at least 6 characters": "密码至少需要6位",
+    };
+    authError.textContent = errorMessages[err.message] || err.message || "操作失败，请重试";
     authError.style.color = "#d9534f";
     authSubmit.textContent = authMode === "login" ? "登录" : "注册";
   }
@@ -2271,7 +2278,6 @@ function init() {
         console.log("[番茄时钟] ✅ 暂停状态已恢复:", timeLeft, "秒, 模式:", currentMode);
         persistIndicator.textContent = "";
         persistIndicator.className = "persist-indicator default";
-        showNotification("已恢复暂停状态");
       }
     } else {
       console.log("[番茄时钟] 无已保存状态，使用默认值");
