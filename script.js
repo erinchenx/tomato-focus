@@ -1328,8 +1328,8 @@ document.addEventListener("visibilitychange", () => {
 function playAlarmSound() {
   const msg =
     currentMode === "work"
-      ? "专注时间结束，休息一下吧☕"
-      : "休息时间结束，完成一个番茄钟🍅";
+      ? "专注时间结束，休息一下吧"
+      : "休息时间结束，完成一个番茄钟";
   showNotification(msg);
   sendSystemNotification(msg);
   startTitleFlash(msg);

@@ -19,11 +19,10 @@ CREATE TABLE IF NOT EXISTS focus_sessions (
 CREATE INDEX IF NOT EXISTS idx_focus_sessions_user_date
   ON focus_sessions(user_id, date_key);
 
--- 用户设置表（自定义类型 + 隐藏类型）
+-- 用户设置表（自定义类型）
 CREATE TABLE IF NOT EXISTS user_settings (
   user_id      UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
   custom_types JSONB DEFAULT '[]'::jsonb,
-  hidden_types JSONB DEFAULT '[]'::jsonb,
   updated_at   TIMESTAMPTZ DEFAULT now()
 );
 

@@ -43,7 +43,6 @@ https://tomato-focus-x.netlify.app/
 - [Supabase](https://supabase.com) — 数据库和用户认证
 - [Netlify](https://netlify.com) — 部署托管
 
-
 ---
 
-保持专注，享受心流！🍅 🍅
+保持专注，享受心流！🍅
